@@ -1,6 +1,9 @@
 /* Window profile: real kind 3 COM CALL and kind 4 register IAT CALL.
  * Every indirect target is resolved before instruction effects commit. */
 #include "runtime.h"
+#ifdef AOT_WINDOW_SWITCH_V1
+#include "../../window_switch_v1/runtime.h"
+#endif
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +35,9 @@ struct AotContext {
     uint32_t import_binding_valid,import_signature;
     uint64_t import_binding_pc,import_binding_target;
     uint8_t *d3d_map_permissions; /* owned arena permission overlay */
+#ifdef AOT_WINDOW_SWITCH_V1
+#include "../../window_switch_v1/runtime_fields.inc"
+#endif
 };
 
 AotState *aot_state_create(void) { return (AotState *)calloc(1,sizeof(AotState)); }
@@ -65,7 +71,13 @@ AotContext *aot_context_create(uint64_t base,const AotInstruction *instructions,
     for(size_t i=0;i<count;i++) {
         AotInstruction *ins=&ctx->instructions[i];
         uint64_t end=(uint64_t)ins->rva+ins->length;
-        if(!ins->length || ins->length>15 || ins->kind>AOT_REGISTER_CALL || end>UINT32_MAX ||
+        if(!ins->length || ins->length>15 ||
+#ifdef AOT_WINDOW_SWITCH_V1
+           ins->kind>AOT_SWITCH_JUMP ||
+#else
+           ins->kind>AOT_REGISTER_CALL ||
+#endif
+           end>UINT32_MAX ||
            base>UINT64_MAX-end || (i && (uint64_t)ctx->instructions[i-1].rva+
            ctx->instructions[i-1].length>ins->rva)) {aot_context_destroy(ctx);return NULL;}
     }
@@ -74,6 +86,9 @@ AotContext *aot_context_create(uint64_t base,const AotInstruction *instructions,
 }
 void aot_context_destroy(AotContext *ctx) {if(ctx){free(ctx->d3d_map_permissions);free(ctx->instructions);free(ctx);}}
 uint32_t aot_add_region(AotContext *ctx,const GuestMemory *region) {
+#ifdef AOT_WINDOW_SWITCH_V1
+    if(ctx && ctx->switch_binding_attempted)return AOT_INVALID;
+#endif
     if(!ctx || !gm_valid(region) || ctx->region_count==AOT_MAX_REGIONS)return AOT_INVALID;
     uintptr_t host=(uintptr_t)region->bytes;
     if(region->size>UINTPTR_MAX-host)return AOT_INVALID;
@@ -122,12 +137,18 @@ static const AotInstruction *instruction(AotContext *ctx,uint64_t pc) {
     AotInstruction key={(uint32_t)(pc-ctx->module_base),0,0,0,0};
     return bsearch(&key,ctx->instructions,ctx->instruction_count,sizeof key,compare_instruction);
 }
+#ifdef AOT_WINDOW_SWITCH_V1
+#include "../../window_switch_v1/runtime_impl.inc"
+#endif
 uint32_t aot_should_exit(void *opaque) {
     AotContext *ctx=(AotContext*)opaque;
     return !ctx || ctx->result.fault.status || ctx->result.returned;
 }
 uint32_t aot_begin(void *state,uint64_t pc,void *opaque) {
     AotState *s=(AotState*)state;AotContext *ctx=(AotContext*)opaque;
+#ifdef AOT_WINDOW_SWITCH_V1
+    if(!ctx || !ctx->switch_bound)return 1;
+#endif
     if(aot_should_exit(ctx))return 1; /* Preserve a callee's exact failure state. */
     ctx->current_pc=pc;
     aot_set_register(s,AOT_RIP,pc);
@@ -157,6 +178,9 @@ uint32_t aot_commit(void *state,uint64_t next_pc,void *opaque) {
             next_pc!=ctx->module_base+ctx->current->target_rva)
             fault(ctx,AOT_BAD_INSTRUCTION,next_pc,0,AOT_EXEC);
     }
+#ifdef AOT_WINDOW_SWITCH_V1
+    if(!ctx->result.fault.status)aot_window_switch_validate_commit(s,ctx,next_pc);
+#endif
     if(!ctx->result.fault.status && ctx->current->kind==AOT_RET) {
         uint64_t expected_pc=depth?ctx->frames[depth-1].pc:ctx->exit_pc;
         uint64_t expected_rsp=depth?ctx->frames[depth-1].rsp:ctx->initial_rsp+8;
@@ -174,6 +198,9 @@ uint32_t aot_commit(void *state,uint64_t next_pc,void *opaque) {
     } else if(ctx->current->kind==AOT_RET) {
         if(depth)ctx->result.call_depth--;else ctx->result.returned=1;
     }
+#ifdef AOT_WINDOW_SWITCH_V1
+    aot_window_switch_commit_complete(ctx);
+#endif
     aot_set_register(s,AOT_RIP,next_pc);ctx->pending_size=0;ctx->in_instruction=0;
     return 0;
 }
@@ -227,6 +254,9 @@ COMPARE(__remill_compare_uge) COMPARE(__remill_compare_ugt)
 COMPARE(__remill_compare_eq) COMPARE(__remill_compare_neq)
 
 uint32_t aot_execute(AotEntry entry,AotState *state,AotContext *ctx,uint64_t pc) {
+#ifdef AOT_WINDOW_SWITCH_V1
+    if(!ctx || !ctx->switch_bound)return AOT_INVALID;
+#endif
     if(!entry || !state || !ctx || ((uintptr_t)state&15))return AOT_INVALID;
     if(ctx->result.steps || ctx->in_instruction || ctx->result.returned || ctx->result.fault.status)return AOT_INVALID;
     entry(state,pc,ctx);

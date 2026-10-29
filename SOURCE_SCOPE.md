@@ -1,6 +1,6 @@
 # 源码导出范围
 
-核心入口为 `migration_cache_v2`、`portable_graphics_v2`、`portable_lifter_v1`、`migration_v5`、`migration_install_v1`。保留被这些模块复用的旧源码目录、所有实际补丁、锁、C/C++ runtime 和 shader header。
+当前窗口switch入口为 `migration_v6`、`window_switch_v1` 与 `migration_run_v3`；基础及旧profile入口为 `migration_cache_v2`、`portable_graphics_v2`、`portable_lifter_v1`、`migration_v5`、`migration_install_v1`。保留被这些模块复用的旧源码目录、所有实际补丁、锁、C/C++ runtime 和 shader header。
 
 此目录是独立源码快照，没有原仓库 `.git`、`build/`、`work/`、运行日志或已安装 provider。唯一初始二进制例外是 `examples/integer-tile/integer_tile.exe`，其第一方来源与 SHA 已记录。README 与剩余工作清单由主维护者单独撰写；本轮收口的 switch 实验源码已单独同步。
 
@@ -19,3 +19,12 @@
 ## 参数化源码与历史 native 证据的区别
 
 公开 switch harness/test/oracle 增加显式 PE 参数或输入目录，以读取公开 examples。历史 288 次正常 ARM64 / 144 次原 x86 对照绑定的是原实验中保存的源码；后续仅参数化的公开接口做纯 Python 测试与 CLI 检查，未重新执行完整 native 差分，不改写历史收据 SHA。原始 x86 capture assembly `d3d11_bridge/scalar_oracle.S` 也原样保留；它只用于明确的测试 oracle。
+
+
+## 正式窗口switch追加
+
+本轮追加window_switch_v1、migration_v6、migration_run_v3、switch_window_fixture_v1及examples/window-switch登记自产PE。窗口runtime/host新增编译时AOT_WINDOW_SWITCH_V1挂点；未启用宏的旧路径继续拒绝kind5。旧scalar _prove只有默认保持entry要求的私有复用钩子，旧公开入口仍拒绝带imports或非entry输入。
+
+新源码及组件probe可复用已有固定provider；不携带provider安装、macOS/Windows SDK、原始App数据或构建日志。公开CLI/测试重跑与原本机native/App执行证据各自保存，不回填旧收据。
+
+静态资源审查额外补齐了保留的 `window_profile_v1/build.py` 所引用的 `migration_v3/__init__.py` 和 `migration_v3/__main__.py` 两个第一方纯 Python 文件；这仅补足旧源码快照引用，不代表旧 CLI 整链重新运行或新增兼容能力。

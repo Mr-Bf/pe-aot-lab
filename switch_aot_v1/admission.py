@@ -218,10 +218,11 @@ def prove_switch(pe_bytes, decoded_packet, root_rva):
         raise AdmissionError('PE: ' + str(exc)) from exc
 
 
-def _prove(image, pe_bytes, packet, root_rva):
+def _prove(image, pe_bytes, packet, root_rva, *, entry_required=True):
     integer(root_rva, 'root RVA', 0, len(image.data)-1)
     root = image.base + root_rva
-    need(root_rva == image.entry_rva, 'one PE entry root required')
+    if entry_required:
+        need(root_rva == image.entry_rva, 'one PE entry root required')
     need(type(packet.get('schema')) is int and packet['schema'] == 1 and
          packet.get('profile') == 'clang-rel32-v1' and
          packet.get('status') == 'CANDIDATE_CLOSURE_NOT_PROVEN_NOT_LIFTED',

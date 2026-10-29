@@ -311,6 +311,9 @@ uint32_t aot_should_exit(void *ctx){return process_stopped(ctx) || aot_engine_sh
 uint32_t aot_begin(void *s,uint64_t pc,void *ctx){return process_stopped(ctx)?1:aot_engine_begin(s,pc,ctx);}
 uint32_t aot_commit(void *s,uint64_t pc,void *ctx){return process_stopped(ctx)?1:aot_engine_commit(s,pc,ctx);}
 uint32_t aot_execute(AotEntry entry,AotState *s,AotContext *ctx,uint64_t pc) {
+#ifdef AOT_WINDOW_SWITCH_V1
+    if(!ctx || !ctx->switch_bound)return AOT_INVALID;
+#endif
     if(!session.configured || session.running || session.used || session.context_identity!=(uintptr_t)ctx ||
        !entry || !s || !ctx || ((uintptr_t)s&15) || !bridge_memory_valid(s,ctx) || !arena_region(ctx) ||
        ctx->result.steps || ctx->in_instruction || ctx->result.returned || ctx->result.fault.status)return AOT_INVALID;

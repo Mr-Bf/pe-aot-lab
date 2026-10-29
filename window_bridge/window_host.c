@@ -81,6 +81,9 @@ static void *worker(void *opaque) {
     for(size_t i=0;i<sizeof methods/sizeof *methods;i++)put64(r->proxies+4096*(methods[i][0]+1)+8*methods[i][1],config.method_targets[methods[i][2]]);
     for(size_t i=0;i<kThunkCount;i++){size_t off=(size_t)(kThunks[i]-kThunks[0]);if((off&4095)||off>=thunk_size)abort();r->thunks[off]=0xc3;r->thunk_permissions[off/4096]=GM_READ|AOT_EXEC;}
     for(size_t i=0;i<sizeof regions/sizeof *regions;i++){r->setup_status=aot_add_region(r->ctx,&regions[i]);if(r->setup_status)goto done;}
+#ifdef AOT_WINDOW_SWITCH_V1
+    r->setup_status=aot_bind_image_switch(r->ctx,r->base);if(r->setup_status)goto done;
+#endif
     r->setup_status=aot_d3d_session_begin(r->ctx,&config);if(r->setup_status)goto done;d3d=1;
     r->setup_status=aot_file_session_begin(r->directory);if(r->setup_status)goto done;files=1;
     r->setup_status=aot_window_callbacks_begin(r->ctx,kCallbacks,kCallbackCount);if(r->setup_status)goto done;callbacks=1;
@@ -185,6 +188,10 @@ int main(int argc,char**argv){
     printf(",\"user32_end_status\":%u,\"host_before_finish\":",r.user32_end);print_host(&before_finish);printf(",\"host_after_finish\":");print_host(&after_finish);
     printf(",\"files\":{\"last_error\":%u,\"open_before_cleanup\":%u,\"open_after_cleanup\":%u,\"cleanup_closes\":%u,\"cleanup_errors\":%u,\"bytes_read\":%" PRIu64 ",\"bytes_written\":%" PRIu64 ",\"api_calls_4_to_9\":[",r.last_error,r.open_before,r.open_after,r.cleanup_closes,r.cleanup_errors,r.bytes_read,r.bytes_written);for(unsigned i=0;i<6;i++)printf("%s%" PRIu64,i?",":"",r.file_calls[i]);printf("]},\"test_queue\":{\"requested\":%zu,\"posted\":%zu,\"injection_error\":%d,\"observed_hwnd\":%" PRIuFAST64 ",\"events\":[",event_count,posted,inject_error,atomic_load(&observed_hwnd));
     for(size_t i=0;i<posted;i++)printf("%s{\"name\":\"%s\",\"origin\":%u,\"wait_count\":%" PRIu64 "}",i?",":"",events[i].name,WB_ORIGIN_TEST_QUEUE,posted_waits[i]);printf("]},\"observations\":{");
-    for(size_t i=0;i<kObservationCount;i++){const NativeObservation*o=&kObservations[i];if(o->rva>sizeof kImageBytes||o->size>sizeof kImageBytes-o->rva)abort();printf("%s\"%s\":\"",i?",":"",o->name);if(r.image)for(uint32_t j=0;j<o->size;j++)printf("%02x",r.image[o->rva+j]);printf("\"");}printf("},\"saved_file\":");print_file(r.directory);printf("}\n");
+    for(size_t i=0;i<kObservationCount;i++){const NativeObservation*o=&kObservations[i];if(o->rva>sizeof kImageBytes||o->size>sizeof kImageBytes-o->rva)abort();printf("%s\"%s\":\"",i?",":"",o->name);if(r.image)for(uint32_t j=0;j<o->size;j++)printf("%02x",r.image[o->rva+j]);printf("\"");}printf("},\"saved_file\":");print_file(r.directory);
+#ifdef AOT_WINDOW_SWITCH_V1
+    printf(",\"switch_commits\":%" PRIu64,aot_window_switch_commits(r.ctx));
+#endif
+    printf("}\n");
     aot_context_destroy(r.ctx);aot_state_destroy(r.state);free(r.image);free(r.stack);free(r.proxies);free(r.map);free(r.scratch);free(r.thunks);free(r.thunk_permissions);return host_status;
 }

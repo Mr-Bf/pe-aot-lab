@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "origin": "First-party Windows PE fixture; no commercial game or third-party executable included",
+  "pe_sha256": "39cfa624486b49daebc6ee9c78750ed3b0ba882c443ffe16f26115668c6621d8",
+  "profile_sha256": "c3974063866c3c80c4e1cb9af46748cc8c2f6039ae286bc6c8afb12c1dd74d76",
+  "source_files": [
+    "switch_window_fixture_v1/switch_tile.cpp",
+    "switch_window_fixture_v1/switch8.c",
+    "switch_window_fixture_v1/build_fixture.py"
+  ],
+  "compiler": "Clang 17.0.6 Windows x86-64 COFF; separate leaf object; no LTO",
+  "linker": "LLD 17.0.6",
+  "runtime_contract": "win32-d3d11-tile-switch-v1",
+  "entry_rva": 4416,
+  "callback_rva": 4096,
+  "leaf_rva": 7216,
+  "table_rva": 9744,
+  "table_entries": 8,
+  "source_to_pe_build_record": "Private build/switch-window-fixture-v1/pe-02; published build instructions require explicit pinned tools/headers",
+  "scope": "Real RIGHT callback invokes signed-rel32 switch leaf; returned value updates position used by rendering and save. Not a commercial game."
+}

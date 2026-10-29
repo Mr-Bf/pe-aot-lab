@@ -1,6 +1,6 @@
 # 许可证与第三方归属
 
-项目自编源码由根目录 `LICENSE` 按 MIT 发布。该许可不替代下列第三方或衍生部分的许可。此导出包含第一方源码/补丁和一个明确登记的自产 PE，不包含已安装的 LLVM、DXMT 动态库、macOS SDK、Steam SDK 或游戏资源。
+项目自编源码由根目录 `LICENSE` 按 MIT 发布。该许可不替代下列第三方或衍生部分的许可。此导出包含第一方源码/补丁和明确登记的自产 PE 样例，不包含已安装的 LLVM、DXMT 动态库、macOS SDK、Steam SDK 或游戏资源。
 
 | 组件 | 固定版本/用途 | 许可与保留说明 |
 | --- | --- | --- |
@@ -14,3 +14,8 @@
 本地 Remill 修改包括 XED-only 构建选择、事务 begin/commit、受限 AOT profile、显式 import/vtable/window calls、INC 支持与显式 semantics 位置。`portable_lifter_v1/build.py:PATCHES` 列出实际应用的补丁。独立 switch 实验的 `switch_aot_v1/driver.patch` 与 `SwitchProfile.h` 扩展 Remill 的有限 rel32 表候选发现、显式 switch lowering 和事务默认拒绝；相关 Remill 衍生内容仍按 Apache-2.0 保留。独立 runtime、准入证明与自制输入属于项目原创部分。
 
 Apple SDK/Xcode/系统库由用户本机提供；项目不授予重分发它们的权利。若另行发行 App 或第三方二进制，需要分别处理原许可要求的对应源、修改说明、替换/重链接等义务；这份源码归属清单不是该二进制发行已验收的声明。
+
+
+## window-switch-v1追加
+
+window_switch_v1/window-driver.patch修改Remill的Lift.cpp及TraceLifter.cpp，继承其Apache-2.0许可与声明；SwitchProfile.h随driver作为本轮变更保存。新App资源纳入原CPU补丁及新增driver.patch/window-driver.patch/header，不能以根MIT覆盖Remill衍生修改。原创运行时include、Python流程及自产窗口样本按根MIT；DXMT及其其他固定依赖许可不变。本源码更新不发布预构建App或第三方工具链。

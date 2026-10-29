@@ -29,8 +29,9 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 | --- | --- |
 | 固定依赖获取和离线构建 | CPU、图形缓存校验与独立构建入口；一次完整 install 实际完成 139 条构建命令。CPU 使用固定 LLVM 17 预编译工具包；Remill／依赖及图形 LLVM／DXMT 另行编译。 |
 | 自制 PE 到原生 App | 显式 PE/profile → 静态提升 → O0/O3 ARM64 对象 → App 打包和验证。较早样本产物已完成窗口输入、存档恢复、保存及正常退出，也验证了搬移路径。 |
-| 最新完整 install 产物 | 构建与独立静态复核通过；首次交互尝试因桌面操作延迟超时，尚未取得该产物的正常退出验收。不能借用旧 App 的成功替代。 |
-| 有限 switch | 两个真实 Clang PE 的单个只读 rel32 跳转表已完成独立字节准入、LLVM 有限分支、ARM64 O0/O3、144 次原始 x86 对照及表绑定/预算/回滚验证。尚未接入正式窗口 App 链；不代表一般间接跳转支持。 |
+| 较早完整 install-v1 产物 | 构建与独立静态复核通过；首次交互尝试因桌面操作延迟超时，尚未取得该产物的正常退出验收。不能借用旧 App 的成功替代。 |
+| 有限 switch 正式 App | schema2 profile → 显式 window-rel32-v1 provider → 全根证明 → 完整 ARM64 App；真实 RIGHT 路径调用只读表并影响绘制/存档。两轮原路径/搬移 Cocoa 正常退出，790文件独立复核；32次真实 WndProc 两基址/O0/O3执行通过。单表叶函数范围，不代表一般间接跳转。 |
+| 早期 switch 原 x86 对照 | 独立 scalar 切片的288次正常ARM与144次原PE字节对照保留；本轮窗口callback不是新的原x86差分。 |
 | 标量／内存／ABI | 多项组件差分和拒绝测试已通过；它们各自的支持范围不同，不等于通用 Windows 运行时。 |
 | 性能 | 已有局部微基准和资源记录；尚无代表性游戏性能、Wine＋Rosetta 同场景对比或整体提速结论。 |
 
@@ -40,7 +41,11 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 
 ## 开发入口
 
-- [有限 switch 复现入口](switch_aot_v1/README.md)：单表叶函数实验，独立于正式窗口构建链。
+当前入口为 **`migration_v6`**，使用 `examples/window-switch` 的新profile。普通CPU provider先生成switch driver overlay，再与既有图形provider生成App。overlay保留对原CPU provider绝对路径的依赖，不能单独搬移，也不是完整provider；生成后的App已另验搬移运行。旧install-v1仍只构建原profile。下一项是把v6接入完整离线install，详见剩余清单。
+
+- [正式窗口 switch 开发与复现](window_switch_v1/README.md)及[实际验收](docs/WINDOW_SWITCH_V1.md)。
+- [真实运行监督与独立复核](migration_run_v3/README.md)：单进程、OS事件与同档恢复分别记录。
+- [早期 scalar switch 复现入口](switch_aot_v1/README.md)：单表叶函数实验，独立于正式窗口构建链。
 - [早期研究](docs/RESEARCH.md)与[反证审查](docs/REVIEW.md)：保留研究时点，不作为当前实现能力声明。
 - [剩余任务与验收门槛](REMAINING.md)：按能力与证据推进，不按周数或估算百分比表示完成度。
 - [第三方许可与修改归属](THIRD_PARTY.md)：根 MIT 许可不覆盖第三方衍生代码的单独许可。
@@ -53,7 +58,14 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 
 构建要求 Apple Silicon macOS、Python 3.13 或更高版本，以及已选择且包含 Metal 工具的 Xcode／SDK。已验环境为 M2、macOS 26.3.1、Xcode 16.2／SDK 15.2；尚未做另一台干净机器的完整复现。大依赖构建需要数 GiB 临时磁盘空间。以下从仓库根目录执行；所有输出目录均使用尚不存在的新路径。
 
-先查看入口和静态分析样例：
+先分析本轮窗口switch样例；完整构建参数见上述正式开发入口：
+
+```sh
+python3.13 -B -m migration_v6 analyze examples/window-switch/switch_tile.exe \
+  --profile examples/window-switch/profile.json
+```
+
+以下是普通provider和旧profile的基础安装入口：
 
 ```sh
 python3.13 -m migration_install_v1 --help

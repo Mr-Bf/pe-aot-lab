@@ -1,0 +1,155 @@
+{
+  "schema": 2,
+  "runtime_contract": "win32-d3d11-tile-switch-v1",
+  "pe_sha256": "39cfa624486b49daebc6ee9c78750ed3b0ba882c443ffe16f26115668c6621d8",
+  "callback_rvas": [
+    4096
+  ],
+  "imports": [
+    {
+      "dll": "d3d11.dll",
+      "name": "D3D11CreateDeviceAndSwapChain"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "CloseHandle"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "CreateFileA"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "ExitProcess"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "GetLastError"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "GetModuleHandleA"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "ReadFile"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "WriteFile"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "AdjustWindowRectEx"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "CreateWindowExA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "DefWindowProcA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "DestroyWindow"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "DispatchMessageA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "GetClientRect"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "GetMessageA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "PostQuitMessage"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "RegisterClassExA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "SetFocus"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "ShowWindow"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "UnregisterClassA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "ValidateRect"
+    }
+  ],
+  "observations": {
+    "window_state": {
+      "rva": 12288,
+      "size": 20
+    },
+    "window_result": {
+      "rva": 12480,
+      "size": 60
+    },
+    "window_message": {
+      "rva": 12688,
+      "size": 48
+    },
+    "window_rectangle": {
+      "rva": 12308,
+      "size": 16
+    },
+    "window_client": {
+      "rva": 12736,
+      "size": 16
+    },
+    "window_swap_desc": {
+      "rva": 12328,
+      "size": 72
+    },
+    "window_feature": {
+      "rva": 12752,
+      "size": 4
+    },
+    "window_handle": {
+      "rva": 12608,
+      "size": 8
+    },
+    "window_instance": {
+      "rva": 12616,
+      "size": 8
+    },
+    "window_load_result": {
+      "rva": 12540,
+      "size": 36
+    },
+    "window_load_candidate": {
+      "rva": 12576,
+      "size": 20
+    },
+    "window_load_extra": {
+      "rva": 12596,
+      "size": 1
+    },
+    "window_load_count": {
+      "rva": 12600,
+      "size": 4
+    },
+    "window_load_extra_count": {
+      "rva": 12604,
+      "size": 4
+    }
+  },
+  "save_observation": "switch-tile.bin",
+  "resources": "embedded-pe-only",
+  "switch_leaf_rva": 7216
+}

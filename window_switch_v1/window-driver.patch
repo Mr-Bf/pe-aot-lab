@@ -1,0 +1,47 @@
+--- a/bin/lift/Lift.cpp
++++ b/bin/lift/Lift.cpp
+@@ -309,13 +309,13 @@
+         }
+         kind=5;call_form="AOT_SWITCH_JUMP";break;
+       case I::kCategoryDirectFunctionCall:
+-        if(SwitchEnabled()) {std::cerr<<"REJECT call in switch profile\n";return false;}
++        if(SwitchEnabled() && !WindowSwitchEnabled()) {std::cerr<<"REJECT call in scalar switch profile\n";return false;}
+         if(inst.branch_taken_pc==inst.branch_not_taken_pc) {
+           std::cerr << "REJECT call-to-next special case\n";return false;
+         }
+         kind=1;call_form="DIRECT";pending.insert(inst.branch_taken_pc);pending.insert(inst.branch_not_taken_pc);break;
+       case I::kCategoryIndirectFunctionCall:
+-        if(SwitchEnabled()) {std::cerr<<"REJECT call in switch profile\n";return false;} {
++        if(SwitchEnabled() && !WindowSwitchEnabled()) {std::cerr<<"REJECT call in scalar switch profile\n";return false;} {
+         if (inst.function=="CALL_NEAR_GPRv_64") {
+           // Only the operand shape is static. Runtime must match the actual
+           // pre-CALL register value and target to an exact registered import
+@@ -420,9 +420,9 @@
+     rec<<"}";
+     records.emplace(pc,rec.str());
+   }
+-  if(SwitchEnabled() && switch_candidates.size()!=1) {std::cerr<<"REJECT missing single candidate\n";return false;}
++  if(SwitchEnabled() && !WindowSwitchEnabled() && switch_candidates.size()!=1) {std::cerr<<"REJECT missing single candidate\n";return false;}
+   std::ostringstream out;
+-  if(SwitchEnabled())out<<"{\"schema\":1,\"profile\":\"clang-rel32-v1\","
++  if(SwitchEnabled())out<<"{\"schema\":1,\"profile\":\""<<FLAGS_aot_switch_profile<<"\","
+     <<"\"status\":\"CANDIDATE_CLOSURE_NOT_PROVEN_NOT_LIFTED\","
+     <<"\"entry_address\":"<<FLAGS_entry_address<<",\"text_address\":"<<FLAGS_address
+     <<",\"text_size\":"<<memory.size()<<",\"data_address\":"<<FLAGS_aot_switch_data_va
+--- a/lib/BC/TraceLifter.cpp
++++ b/lib/BC/TraceLifter.cpp
+@@ -450,7 +450,13 @@
+             auto failure=llvm::BasicBlock::Create(context,"aot.switch.failure",func);
+             llvm::IRBuilder<> ir(block);
+             auto actual=LoadNextProgramCounter(block,*intrinsics);
+-            auto dispatch=ir.CreateSwitch(actual,failure,finite_targets.size());
++            // Trace entry PCs are runtime VAs; local target labels use the
++            // preferred addresses discovered from the original PE. Preserve
++            // the delta shared by this trace and its private direct callees.
++            auto delta=ir.CreateSub(func->getArg(1),
++              llvm::ConstantInt::get(llvm::cast<llvm::IntegerType>(word_type),trace_addr));
++            auto canonical=ir.CreateSub(actual,delta);
++            auto dispatch=ir.CreateSwitch(canonical,failure,finite_targets.size());
+             for(auto target:finite_targets) {
+               inst_work_list.insert(target);
+               dispatch->addCase(llvm::ConstantInt::get(llvm::cast<llvm::IntegerType>(word_type),target),GetOrCreateBlock(target));

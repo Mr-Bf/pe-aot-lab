@@ -24,3 +24,12 @@
 - 公开输入准入结果：`63909cd793faeb16d7f86f3e948ab1de0bc8d75d0ee8c47212e3f5fc7c5c0aac`。
 
 摘要用于识别记录，不替代原始证据或审查。当前Go结论仅为继续受限静态翻译开发；通用游戏兼容、整链高性能和完整发行仍未验收。
+
+
+# 正式窗口 switch 集成追加（2026-10-29）
+
+本轮记录见 [完整验收](docs/WINDOW_SWITCH_V1.md)。新schema2/capability全根证明已生成实际App；原路径与搬移副本两次直接bundle executable启动，Cocoa系统事件触发switch 2/1次，steps 1197/917，分别保存position/moves/draws=4/3/5和5/4/8，均正常退出、TEST_QUEUE=0、proc_translated=0。第二轮实际绘制3次，draws=8为存档累计值。独立790文件复核普通与优化结果SHA相同。
+
+实际WndProc两PE基址×O0/O3×8位置共32次通过；使用API拒绝stub的组件探针，不能计成32次App或新原x86差分。旧版16次rebased故障6的负对照保留，修正LLVM switch动态PC规范化后重建并通过新输入。86项纯Python门禁普通/-O通过，低层真实事务另有旧/新模式O0/O3及sanitizer记录。
+
+公开源码包含新模块、补丁与自产PE；完整本机现场仍不上传。没有Finder/LaunchServices、物理键盘、像素等价、长测、第二台干净机器或性能优势结论；旧install-v1尚未自动安装新switch overlay。

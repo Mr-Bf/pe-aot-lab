@@ -30,3 +30,4 @@
 /.evidence/
 !examples/switch/switch8.exe
 !examples/switch/switch8_variant.exe
+!examples/window-switch/switch_tile.exe
