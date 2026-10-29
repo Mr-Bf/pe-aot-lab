@@ -19,3 +19,8 @@ Apple SDK/Xcode/系统库由用户本机提供；项目不授予重分发它们�
 ## window-switch-v1追加
 
 window_switch_v1/window-driver.patch修改Remill的Lift.cpp及TraceLifter.cpp，继承其Apache-2.0许可与声明；SwitchProfile.h随driver作为本轮变更保存。新App资源纳入原CPU补丁及新增driver.patch/window-driver.patch/header，不能以根MIT覆盖Remill衍生修改。原创运行时include、Python流程及自产窗口样本按根MIT；DXMT及其其他固定依赖许可不变。本源码更新不发布预构建App或第三方工具链。
+
+
+## install-v2追加
+
+本轮协调/恢复/独立reader为原创Python源码，使用标准库；未引入新的第三方运行时或修改现有依赖许可证。原CPU、Remill衍生补丁与DXMT角色继续按固定版本和原声明分发；SDK/工具链/预构建App不随本源码发行。锁与进程协议引用官方Apple/Python文档，实际语义以本机测试与保留记录核对。

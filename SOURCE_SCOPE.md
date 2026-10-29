@@ -1,6 +1,6 @@
 # 源码导出范围
 
-当前窗口switch入口为 `migration_v6`、`window_switch_v1` 与 `migration_run_v3`；基础及旧profile入口为 `migration_cache_v2`、`portable_graphics_v2`、`portable_lifter_v1`、`migration_v5`、`migration_install_v1`。保留被这些模块复用的旧源码目录、所有实际补丁、锁、C/C++ runtime 和 shader header。
+当前完整安装入口为 `migration_install_v2`，窗口switch低层入口为 `migration_v6`、`window_switch_v1` 与 `migration_run_v3`；基础及旧profile入口为 `migration_cache_v2`、`portable_graphics_v2`、`portable_lifter_v1`、`migration_v5`、`migration_install_v1`。保留被这些模块复用的旧源码目录、所有实际补丁、锁、C/C++ runtime 和 shader header。
 
 此目录是独立源码快照，没有原仓库 `.git`、`build/`、`work/`、运行日志或已安装 provider。唯一初始二进制例外是 `examples/integer-tile/integer_tile.exe`，其第一方来源与 SHA 已记录。README 与剩余工作清单由主维护者单独撰写；本轮收口的 switch 实验源码已单独同步。
 
@@ -28,3 +28,10 @@
 新源码及组件probe可复用已有固定provider；不携带provider安装、macOS/Windows SDK、原始App数据或构建日志。公开CLI/测试重跑与原本机native/App执行证据各自保存，不回填旧收据。
 
 静态资源审查额外补齐了保留的 `window_profile_v1/build.py` 所引用的 `migration_v3/__init__.py` 和 `migration_v3/__main__.py` 两个第一方纯 Python 文件；这仅补足旧源码快照引用，不代表旧 CLI 整链重新运行或新增兼容能力。
+
+
+## 离线install-v2追加
+
+追加migration_install_v2生产协调器、独立reader、边界测试及显式recovery_probe/recovery_attach实验。安装器捕获自身实际Python闭包及非Python构建资源；独立reader/test/probe不混入生产实现身份。恢复实验会针对自行核对的本次图形worker发SIGTERM，属于显式测试入口而非自动重试，不作为普通安装必经步骤。
+
+公开不携带缓存、安装provider、App、运行日志或用户AppData。真实M2从固定缓存的构建/恢复/运行证据与公开源码Python检查分别记录，不能互相替代。

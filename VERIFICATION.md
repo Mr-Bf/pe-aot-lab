@@ -33,3 +33,12 @@
 实际WndProc两PE基址×O0/O3×8位置共32次通过；使用API拒绝stub的组件探针，不能计成32次App或新原x86差分。旧版16次rebased故障6的负对照保留，修正LLVM switch动态PC规范化后重建并通过新输入。86项纯Python门禁普通/-O通过，低层真实事务另有旧/新模式O0/O3及sanitizer记录。
 
 公开源码包含新模块、补丁与自产PE；完整本机现场仍不上传。没有Finder/LaunchServices、物理键盘、像素等价、长测、第二台干净机器或性能优势结论；旧install-v1尚未自动安装新switch overlay。
+
+
+# v6完整离线安装与恢复追加（2026-10-29）
+
+从固定缓存新建CPU、overlay、graphics、App，真实受控SIGTERM保留原图形失败；重验复用CPU/switch后新图形目录重建并完成五阶段。被接受builder记录144条构建/验证命令；独立5722文件读验普通/-O摘要相同。观察器最初ps权限失败、接管孤儿退出码null、旧UNOBSERVABLE与后来的ABSENT分别保存，没有抹除失败。
+
+本轮新产物32次ARM64 callback通过；原路径PID40550 steps1229/switch2，搬移PID40998 steps949/switch1，正常保存position/moves/draws=4/3/5→5/4/8；独立790文件运行读验普通/-O一致。属于直接bundle执行与工具OS事件，不是Finder/LaunchServices、物理键盘、像素、长测或性能验收。
+
+新installer27项（每模式含1个受控Python锁child）与reader13项普通/-O通过；源码默认队列126项。完整证据、实际失败与复现入口见 [验收记录](docs/MIGRATION_INSTALL_V2.md)。公开源码检查不是另一台干净机器native验证，原始现场不随源码发行。
