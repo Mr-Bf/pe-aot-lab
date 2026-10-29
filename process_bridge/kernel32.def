@@ -1,0 +1,8 @@
+LIBRARY KERNEL32.dll
+EXPORTS
+    CreateFileA
+    WriteFile
+    ReadFile
+    CloseHandle
+    GetLastError
+    ExitProcess

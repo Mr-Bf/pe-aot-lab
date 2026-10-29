@@ -1,0 +1,124 @@
+--- a/bin/lift/Lift.cpp
++++ b/bin/lift/Lift.cpp
+@@ -99,6 +99,7 @@
+ DEFINE_bool(aot_inc_base32,false,"Enable non-LOCK INC m32 [GPR64+0], excluding RSP/index");
+ 
+ using Memory = std::map<uint64_t, uint8_t>;
++#include "SwitchProfile.h"
+ 
+ // Unhexlify the data passed to `-bytes`, and fill in `memory` with each
+ // such byte.
+@@ -143,6 +144,7 @@
+ // aot-stage3: closed scalar profile, checked with XED before lifting.
+ static bool AotPreflight(const remill::Arch *arch, Memory &memory) {
+   using I = remill::Instruction;
++  if(!SwitchInitialize(memory))return false;
+   const std::set<std::string> allowed = {
+     "MOV","MOVZX","MOVSX","MOVSXD","LEA","ADD","SUB","XOR","AND","OR",
+     "TEST","CMP","ROL","INC","DEC","NOP","PUSH","POP","CALL_NEAR","RET_NEAR","SETZ","SETNZ","CMOVNB",
+@@ -251,6 +253,7 @@
+     if (observed_padding && inst.category!=I::kCategoryNoOp) {
+       std::cerr << "REJECT observed padding is not a Remill NOP\n";return false;
+     }
++    if(SwitchEnabled())switch_nodes[pc]=SwitchRead(pc,decoded,inst,bytes);
+     // The ordinary D3D11 PE needs SETZ SIL/DIL and CMOVNB reg32,reg32.
+     // XED flags_read is checked by the Python CFG definedness gate.
+     // No conditional memory loads, other conditions or SETcc registers.
+@@ -300,12 +303,19 @@
+       case I::kCategoryDirectJump: pending.insert(inst.branch_taken_pc);break;
+       case I::kCategoryConditionalBranch:
+         pending.insert(inst.branch_taken_pc);pending.insert(inst.branch_not_taken_pc);break;
++      case I::kCategoryIndirectJump:
++        if(!SwitchEnabled() || !SwitchDiscover(pc,memory,pending)) {
++          std::cerr<<"REJECT finite switch candidate shape\n";return false;
++        }
++        kind=5;call_form="AOT_SWITCH_JUMP";break;
+       case I::kCategoryDirectFunctionCall:
++        if(SwitchEnabled()) {std::cerr<<"REJECT call in switch profile\n";return false;}
+         if(inst.branch_taken_pc==inst.branch_not_taken_pc) {
+           std::cerr << "REJECT call-to-next special case\n";return false;
+         }
+         kind=1;call_form="DIRECT";pending.insert(inst.branch_taken_pc);pending.insert(inst.branch_not_taken_pc);break;
+-      case I::kCategoryIndirectFunctionCall: {
++      case I::kCategoryIndirectFunctionCall:
++        if(SwitchEnabled()) {std::cerr<<"REJECT call in switch profile\n";return false;} {
+         if (inst.function=="CALL_NEAR_GPRv_64") {
+           // Only the operand shape is static. Runtime must match the actual
+           // pre-CALL register value and target to an exact registered import
+@@ -405,12 +415,25 @@
+         <<"\",\"base_reg\":\""<<base_reg<<"\",\"displacement\":"<<displacement
+         <<",\"slot\":"<<slot<<",\"operand_reg\":\""<<operand_reg<<"\""
+         <<",\"rmw_base_reg\":\""<<rmw_base_reg<<"\",\"rmw_displacement\":"<<rmw_displacement
+-        <<",\"rmw_width\":"<<rmw_width<<"}";
++        <<",\"rmw_width\":"<<rmw_width;
++    if(SwitchEnabled())SwitchMetadata(rec,switch_nodes.at(pc));
++    rec<<"}";
+     records.emplace(pc,rec.str());
+   }
+-  std::ofstream out(FLAGS_aot_manifest);
+-  out<<"[";bool first=true;for(const auto &item:records){if(!first)out<<",";first=false;out<<item.second;}out<<"]\n";
+-  return out.good();
++  if(SwitchEnabled() && switch_candidates.size()!=1) {std::cerr<<"REJECT missing single candidate\n";return false;}
++  std::ostringstream out;
++  if(SwitchEnabled())out<<"{\"schema\":1,\"profile\":\"clang-rel32-v1\","
++    <<"\"status\":\"CANDIDATE_CLOSURE_NOT_PROVEN_NOT_LIFTED\","
++    <<"\"entry_address\":"<<FLAGS_entry_address<<",\"text_address\":"<<FLAGS_address
++    <<",\"text_size\":"<<memory.size()<<",\"data_address\":"<<FLAGS_aot_switch_data_va
++    <<",\"data_size\":"<<switch_data.size()<<",\"instructions\":";
++  out<<"[";bool first=true;for(const auto &item:records){if(!first)out<<",";first=false;out<<item.second;}out<<"]";
++  if(SwitchEnabled()){out<<",\"switch_candidates\":";SwitchCandidatesJSON(out);out<<"}";}
++  out<<"\n";
++  std::ofstream file(FLAGS_aot_manifest);file<<out.str();file.close();
++  if(!file)return false;
++  if(!SwitchApprove(out.str())){std::cerr<<"REJECT complete switch proof/bytes mismatch\n";return false;}
++  return true;
+ }
+ 
+ static void AotClearOpaqueEffects(llvm::Module *module) {
+@@ -445,6 +468,14 @@
+         module(module),
+         memory(memory),
+         entry(entry) {}
++
++  void ForEachDevirtualizedTarget(const remill::Instruction &inst,
++      std::function<void(uint64_t,remill::DevirtualizedTargetKind)> callback) override {
++    if(!switch_lift_approved)return;
++    for(const auto &candidate:switch_candidates)if(candidate.jump==inst.pc)
++      for(auto target:std::set<uint64_t>(candidate.targets.begin(),candidate.targets.end()))
++        callback(target,remill::DevirtualizedTargetKind::kTraceLocal);
++  }
+ 
+   // Called when we have lifted, i.e. defined the contents, of a new trace.
+   // The derived class is expected to do something useful with this.
+--- a/lib/BC/TraceLifter.cpp
++++ b/lib/BC/TraceLifter.cpp
+@@ -439,7 +439,28 @@
+ 
+         case Instruction::kCategoryIndirectJump: {
+           try_add_delay_slot(true, block);
+-          AddTerminatingTailCall(block, intrinsics->jump, *intrinsics);
++          std::set<uint64_t> finite_targets;
++          manager.ForEachDevirtualizedTarget(inst,[&](uint64_t target,DevirtualizedTargetKind kind) {
++            CHECK(kind==DevirtualizedTargetKind::kTraceLocal);
++            finite_targets.insert(target);
++          });
++          if(finite_targets.empty()) {
++            AddTerminatingTailCall(block, intrinsics->jump, *intrinsics);
++          } else {
++            auto failure=llvm::BasicBlock::Create(context,"aot.switch.failure",func);
++            llvm::IRBuilder<> ir(block);
++            auto actual=LoadNextProgramCounter(block,*intrinsics);
++            auto dispatch=ir.CreateSwitch(actual,failure,finite_targets.size());
++            for(auto target:finite_targets) {
++              inst_work_list.insert(target);
++              dispatch->addCase(llvm::ConstantInt::get(llvm::cast<llvm::IntegerType>(word_type),target),GetOrCreateBlock(target));
++            }
++            llvm::IRBuilder<> fail(failure);
++            auto memory=LoadMemoryPointer(failure,*intrinsics);
++            auto callee=module->getOrInsertFunction("aot_switch_miss",
++              llvm::FunctionType::get(memory->getType(),{state_ptr->getType(),word_type,memory->getType()},false));
++            fail.CreateRet(fail.CreateCall(callee,{state_ptr,actual,memory}));
++          }
+           break;
+         }
+ 

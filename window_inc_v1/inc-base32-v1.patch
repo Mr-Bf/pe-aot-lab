@@ -1,0 +1,63 @@
+--- a/bin/lift/Lift.cpp
++++ b/bin/lift/Lift.cpp
+@@ -91,6 +91,7 @@
+ DEFINE_string(aot_iat_slots,"","Explicit authorized import IAT slot VAs, decimal comma-separated");
+ DEFINE_bool(aot_vtable_mem64,false,"Enable the closed window MEM64 virtual-call shape profile");
+ DEFINE_bool(aot_import_reg64,false,"Enable register CALL with runtime-only exact import-thunk target authorization");
++DEFINE_bool(aot_inc_base32,false,"Enable non-LOCK INC m32 [GPR64+0], excluding RSP/index");
+ 
+ using Memory = std::map<uint64_t, uint8_t>;
+ 
+@@ -211,17 +212,24 @@
+     if(iclass=="RET_NEAR" && xed_decoded_inst_get_immediate_width_bits(&decoded)) {
+       std::cerr << "REJECT RET immediate stack cleanup\n";return false;
+     }
++    std::string rmw_base_reg; int64_t rmw_displacement=0; unsigned rmw_width=0;
+     for(unsigned m=0;m<xed_decoded_inst_number_of_memory_operands(&decoded);++m) {
+       if(xed_decoded_inst_mem_read(&decoded,m)&&xed_decoded_inst_mem_written(&decoded,m)) {
+-        // Only the observed non-LOCK INC dword [RIP+disp32] is admitted.
+-        // Remill still reads then stages one write; runtime owns transaction
+-        // preflight/commit. INC preserves CF and does not make it defined.
++        // Versioned extension: one non-LOCK INC dword read+staged write.
++        // Preserve old RIP addressing. New base addressing has no index or
++        // displacement and excludes RSP. Runtime still owns all permissions,
++        // cross-region preflight/commit and fault State rollback.
++        const auto base=xed_decoded_inst_get_base_reg(&decoded,m);
++        const int64_t disp=xed_decoded_inst_get_memory_displacement(&decoded,m);
++        const bool base32=FLAGS_aot_inc_base32 &&
++          xed_gpr_reg_class(base)==XED_REG_CLASS_GPR64 && base!=XED_REG_RSP && disp==0;
+         if (iclass!="INC" || m!=0 || xed_decoded_inst_number_of_memory_operands(&decoded)!=1 ||
+             xed_decoded_inst_get_memory_operand_length(&decoded,m)!=4 ||
+-            xed_decoded_inst_get_base_reg(&decoded,m)!=XED_REG_RIP ||
++            (base!=XED_REG_RIP && !base32) ||
+             xed_decoded_inst_get_index_reg(&decoded,m)!=XED_REG_INVALID) {
+-          std::cerr << "REJECT memory RMW outside INC RIP m32 at " << pc << '\n';return false;
++          std::cerr << "REJECT memory RMW outside INC RIP/base32 profile at " << pc << '\n';return false;
+         }
++        rmw_base_reg=xed_reg_enum_t2str(base);rmw_displacement=disp;rmw_width=4;
+       }
+       if(xed_decoded_inst_get_base_reg(&decoded,m)==XED_REG_INVALID &&
+          xed_decoded_inst_get_index_reg(&decoded,m)==XED_REG_INVALID) {
+@@ -261,8 +269,9 @@
+     if (iclass=="SETNZ" && (inst.function!="SETNZ_GPR8" ||
+         xed_decoded_inst_number_of_memory_operands(&decoded)!=0 ||
+         (xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_CL &&
+-         xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_DL))) {
+-      std::cerr << "REJECT SETNZ outside CL/DL-only profile\n";return false;
++         xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_DL &&
++         xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_SIL))) {
++      std::cerr << "REJECT SETNZ outside CL/DL/SIL-only profile\n";return false;
+     }
+     if (iclass=="AND" && xed_decoded_inst_get_operand_width(&decoded)==8 &&
+         (inst.function!="AND_GPR8_GPR8_20" ||
+@@ -389,7 +398,9 @@
+         <<",\"flags_read\":"<<reads<<",\"flags_written\":"<<writes<<",\"flags_undefined\":"<<undefs
+         <<",\"iat_slot_pc\":"<<iat_slot_pc<<",\"call_form\":\""<<call_form
+         <<"\",\"base_reg\":\""<<base_reg<<"\",\"displacement\":"<<displacement
+-        <<",\"slot\":"<<slot<<",\"operand_reg\":\""<<operand_reg<<"\"}";
++        <<",\"slot\":"<<slot<<",\"operand_reg\":\""<<operand_reg<<"\""
++        <<",\"rmw_base_reg\":\""<<rmw_base_reg<<"\",\"rmw_displacement\":"<<rmw_displacement
++        <<",\"rmw_width\":"<<rmw_width<<"}";
+     records.emplace(pc,rec.str());
+   }
+   std::ofstream out(FLAGS_aot_manifest);

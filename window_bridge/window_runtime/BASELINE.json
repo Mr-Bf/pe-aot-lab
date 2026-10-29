@@ -1,0 +1,9 @@
+{
+  "status": "IMPLEMENTATION_IN_PROGRESS_NOT_BUILT",
+  "copied_sources": {
+    "runtime.c": "be24a4424f6aa213eaceea1ae6bb81cf3b103f51b9bb172ef611128772e9baa8",
+    "runtime.h": "7262aef5889b741b6e9e2e4cfddab10777711c4690ec0cef155254570cbc9b3f",
+    "transaction_v1.c": "51bf445470ff37d3a8ecb1ae9201a04423b030cc1858c6786671e90b34e4b464"
+  },
+  "scope": "new window integration; original register runtime remains frozen"
+}

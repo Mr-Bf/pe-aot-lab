@@ -1,0 +1,45 @@
+{
+  "decode_packet_scope": "Original candidate closure, not a proof or execution receipt. Public admission code must independently prove each packet against the corresponding fixed PE.",
+  "export_execution": {
+    "app": 0,
+    "gpu": 0,
+    "guest": 0
+  },
+  "files": {
+    "supported.packet.json": {
+      "bytes": 16445,
+      "sha256": "a217157949100dbb756d65018df948b2eb580ca2b9873990a590a39e3b721330",
+      "source": "build/switch-aot-v1/driver-decode-03/supported.packet.json"
+    },
+    "switch8.exe": {
+      "bytes": 2048,
+      "sha256": "c34e9d55cc9719fe3219a4f991ec4f53fca5583b5d026eb8cdc58aa26a12181c",
+      "source": "build/switch-supported-fixture-v1/pe-02/switch8.exe"
+    },
+    "switch8_variant.exe": {
+      "bytes": 2048,
+      "sha256": "822fbe1e6b82d4229772cd964a5ac27c9c688510206ebc3cb571bae6c2eba099",
+      "source": "build/switch-variant-fixture-v1/pe-01/switch8_variant.exe"
+    },
+    "variant.packet.json": {
+      "bytes": 19620,
+      "sha256": "a226505c8b754d5ed0673f84531745fb540e02029d0a173e3b4fd3d66d1cc244",
+      "source": "build/switch-aot-v1/driver-decode-03/variant.packet.json"
+    }
+  },
+  "origin": "Two first-party MIT C fixtures actually compiled by Clang and linked as Windows x86-64 PE; no hand-written jump-table byte substitution.",
+  "private_raw_logs_included": false,
+  "schema": 1,
+  "sources": {
+    "switch_supported_fixture_v1/switch8.c": {
+      "bytes": 589,
+      "sha256": "8d69d2232d531524840efe121fb591f40fdd30a27cc23b7ce43049a49a5fd071",
+      "source": "switch_supported_fixture_v1/switch8.c"
+    },
+    "switch_variant_fixture_v1/switch8_variant.c": {
+      "bytes": 662,
+      "sha256": "3c1c95a17579e4237de6e12f818b6fa8079dc61d620cd4cbc2f0a288f1ca7a5a",
+      "source": "switch_variant_fixture_v1/switch8_variant.c"
+    }
+  }
+}

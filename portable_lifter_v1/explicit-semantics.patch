@@ -1,0 +1,78 @@
+--- a/bin/lift/Lift.cpp
++++ b/bin/lift/Lift.cpp
+@@ -27,6 +27,8 @@
+ #include <llvm/IR/Module.h>
+ #include <llvm/IR/Type.h>
+ #include <llvm/IR/Verifier.h>
++#include <llvm/IRReader/IRReader.h>
++#include <llvm/Support/SourceMgr.h>
+ #include <llvm/Support/FileSystem.h>
+ #include <llvm/Support/raw_ostream.h>
+ #include <llvm/Support/ModRef.h>
+@@ -36,6 +38,7 @@
+ #include <remill/Arch/Instruction.h>
+ #include <remill/Arch/Name.h>
+ #include <remill/BC/ABI.h>
++#include <remill/BC/Annotate.h>
+ #include <remill/BC/IntrinsicTable.h>
+ #include <remill/BC/Lifter.h>
+ #include <remill/BC/Optimizer.h>
+@@ -47,6 +50,7 @@
+ #include <algorithm>
+ #include <cstdint>
+ #include <fstream>
++#include <filesystem>
+ #include <functional>
+ #include <iostream>
+ #include <map>
+@@ -73,6 +77,7 @@
+               "Defaults to the value of -address.");
+ 
+ DEFINE_string(bytes, "", "Hex-encoded byte string to lift.");
++DEFINE_string(aot_semantics, "", "Required absolute semantics file; no default-path fallback.");
+ 
+ DEFINE_string(
+     ir_pre_out, "",
+@@ -636,7 +641,41 @@
+     return EXIT_FAILURE;
+   }
+ 
+-  std::unique_ptr<llvm::Module> module(remill::LoadArchSemantics(arch.get()));
++  // The portable provider never searches historical build/install directories.
++  // Preserve LoadArchSemantics initialization, using an explicit parsed file.
++  const std::filesystem::path requested_semantics(FLAGS_aot_semantics);
++  if (FLAGS_aot_semantics.empty() || !requested_semantics.is_absolute()) {
++    std::cerr << "REJECT: --aot_semantics requires an absolute file path\n";
++    return EXIT_FAILURE;
++  }
++  std::error_code semantics_error;
++  const auto semantics_path =
++      std::filesystem::canonical(requested_semantics, semantics_error);
++  if (semantics_error ||
++      !std::filesystem::is_regular_file(semantics_path, semantics_error) ||
++      semantics_error) {
++    std::cerr << "REJECT: explicit semantics file does not exist or is not regular\n";
++    return EXIT_FAILURE;
++  }
++  std::cerr << "AOT_SEMANTICS_REQUEST=" << FLAGS_aot_semantics << "\n"
++            << "AOT_SEMANTICS_PATH=" << semantics_path.string() << "\n";
++  llvm::SMDiagnostic semantics_diagnostic;
++  auto module = llvm::parseIRFile(semantics_path.string(),
++                                  semantics_diagnostic, context);
++  if (!module) {
++    std::cerr << "REJECT: cannot parse explicit semantics file\n";
++    semantics_diagnostic.print("remill-lift", llvm::errs());
++    return EXIT_FAILURE;
++  }
++  if (llvm::verifyModule(*module, &llvm::errs())) {
++    std::cerr << "REJECT: invalid explicit semantics module\n";
++    return EXIT_FAILURE;
++  }
++  arch->PrepareModule(module);
++  arch->InitFromSemanticsModule(module.get());
++  for (auto &func : *module) {
++    remill::Annotate<remill::Semantics>(&func);
++  }
+ 
+   const auto mem_ptr_type = arch->MemoryPointerType();
+ 

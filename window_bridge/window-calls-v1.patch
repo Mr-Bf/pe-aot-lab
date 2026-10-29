@@ -1,0 +1,127 @@
+--- a/bin/lift/Lift.cpp
++++ b/bin/lift/Lift.cpp
+@@ -89,7 +89,8 @@
+ DEFINE_string(aot_manifest,"","AOT instruction manifest");
+ DEFINE_bool(aot_decode_only,false,"Validate and emit manifest only");
+ DEFINE_string(aot_iat_slots,"","Explicit authorized import IAT slot VAs, decimal comma-separated");
+-DEFINE_bool(aot_vtable_mem64,false,"Enable the closed D3D11 Draw MEM64 virtual-call shape profile");
++DEFINE_bool(aot_vtable_mem64,false,"Enable the closed window MEM64 virtual-call shape profile");
++DEFINE_bool(aot_import_reg64,false,"Enable register CALL with runtime-only exact import-thunk target authorization");
+ 
+ using Memory = std::map<uint64_t, uint8_t>;
+ 
+@@ -138,7 +139,7 @@
+   using I = remill::Instruction;
+   const std::set<std::string> allowed = {
+     "MOV","MOVZX","MOVSX","MOVSXD","LEA","ADD","SUB","XOR","AND","OR",
+-    "TEST","CMP","ROL","INC","DEC","NOP","PUSH","POP","CALL_NEAR","RET_NEAR","SETZ","CMOVNB",
++    "TEST","CMP","ROL","INC","DEC","NOP","PUSH","POP","CALL_NEAR","RET_NEAR","SETZ","SETNZ","CMOVNB",
+     "JMP","JB","JBE","JL","JLE","JNB","JNBE","JNL","JNLE","JNO","JNP",
+     "JNS","JNZ","JO","JP","JS","JZ"
+   };
+@@ -176,10 +177,17 @@
+     if(err!=XED_ERROR_NONE) {std::cerr << "REJECT XED decode at " << pc << '\n';return false;}
+     std::string iclass=xed_iclass_enum_t2str(xed_decoded_inst_get_iclass(&decoded));
+     unsigned length=xed_decoded_inst_get_length(&decoded);
++    // Exactly the three CS-prefixed alignment NOP byte strings emitted in the
++    // frozen Windows sample. This is not permission for segmented addressing.
++    const std::vector<uint8_t> raw_bytes(bytes,bytes+length);
++    const bool observed_padding = iclass=="NOP" &&
++      (raw_bytes==std::vector<uint8_t>{0x66,0x66,0x66,0x66,0x66,0x66,0x2e,0x0f,0x1f,0x84,0,0,0,0,0} ||
++       raw_bytes==std::vector<uint8_t>{0x66,0x66,0x66,0x2e,0x0f,0x1f,0x84,0,0,0,0,0} ||
++       raw_bytes==std::vector<uint8_t>{0x66,0x2e,0x0f,0x1f,0x84,0,0,0,0,0});
+     for(unsigned n=0;n<length;++n) {
+       uint8_t b=bytes[n];
+       if(b==0xf0 || b==0xf2 || b==0xf3 || b==0x64 || b==0x65 || b==0x67 ||
+-         b==0x2e || b==0x36 || b==0x3e || b==0x26) {
++         (b==0x2e && !observed_padding) || b==0x36 || b==0x3e || b==0x26) {
+         std::cerr << "REJECT prefix at " << pc << '\n';return false;
+       }
+       if(b==0x66 || (b>=0x40&&b<=0x4f)) continue;
+@@ -227,6 +235,9 @@
+     if(!arch->DecodeInstruction(pc,raw,inst,arch->CreateInitialContext()) || inst.bytes.size()!=length) {
+       std::cerr << "REJECT Remill/XED mismatch\n";return false;
+     }
++    if (observed_padding && inst.category!=I::kCategoryNoOp) {
++      std::cerr << "REJECT observed padding is not a Remill NOP\n";return false;
++    }
+     // The ordinary D3D11 PE needs SETZ SIL/DIL and CMOVNB reg32,reg32.
+     // XED flags_read is checked by the Python CFG definedness gate.
+     // No conditional memory loads, other conditions or SETcc registers.
+@@ -246,8 +257,30 @@
+          xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_SIL && xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_DIL))) {
+       std::cerr << "REJECT SETZ outside AL/SIL/DIL-only profile\n";return false;
+     }
++    // New window-only byte shapes. Defined flags are checked per CFG root.
++    if (iclass=="SETNZ" && (inst.function!="SETNZ_GPR8" ||
++        xed_decoded_inst_number_of_memory_operands(&decoded)!=0 ||
++        (xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_CL &&
++         xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_DL))) {
++      std::cerr << "REJECT SETNZ outside CL/DL-only profile\n";return false;
++    }
++    if (iclass=="AND" && xed_decoded_inst_get_operand_width(&decoded)==8 &&
++        (inst.function!="AND_GPR8_GPR8_20" ||
++         xed_decoded_inst_number_of_memory_operands(&decoded)!=0 ||
++         xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_AL ||
++         (xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG1)!=XED_REG_CL &&
++          xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG1)!=XED_REG_DL))) {
++      std::cerr << "REJECT AND8 outside AL-CL/DL opcode20 profile\n";return false;
++    }
++    if (iclass=="TEST" && xed_decoded_inst_get_operand_width(&decoded)==16 &&
++        (inst.function!="TEST_GPRv_GPRv_16" ||
++         xed_decoded_inst_number_of_memory_operands(&decoded)!=0 ||
++         xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_AX ||
++         xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG1)!=XED_REG_AX)) {
++      std::cerr << "REJECT TEST16 outside AX-AX profile\n";return false;
++    }
+     int kind=0; uint64_t iat_slot_pc=0;
+-    std::string call_form, base_reg; int64_t displacement=0; unsigned slot=0;
++    std::string call_form, base_reg, operand_reg; int64_t displacement=0; unsigned slot=0;
+     switch(inst.category) {
+       case I::kCategoryNormal: case I::kCategoryNoOp: pending.insert(inst.next_pc);break;
+       case I::kCategoryDirectJump: pending.insert(inst.branch_taken_pc);break;
+@@ -259,6 +292,24 @@
+         }
+         kind=1;call_form="DIRECT";pending.insert(inst.branch_taken_pc);pending.insert(inst.branch_not_taken_pc);break;
+       case I::kCategoryIndirectFunctionCall: {
++        if (inst.function=="CALL_NEAR_GPRv_64") {
++          // Only the operand shape is static. Runtime must match the actual
++          // pre-CALL register value and target to an exact registered import
++          // thunk; this does not prove that the register was loaded from IAT.
++          const auto reg=xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0);
++          if (!FLAGS_aot_import_reg64 || authorized_iat.empty() || iclass!="CALL_NEAR" ||
++              xed_gpr_reg_class(reg)!=XED_REG_CLASS_GPR64 || reg==XED_REG_RSP ||
++              xed_decoded_inst_number_of_memory_operands(&decoded)!=1 ||
++              xed_decoded_inst_get_base_reg(&decoded,0)!=XED_REG_RSP ||
++              xed_decoded_inst_get_index_reg(&decoded,0)!=XED_REG_INVALID ||
++              xed_decoded_inst_get_memory_operand_length(&decoded,0)!=8 ||
++              xed_decoded_inst_mem_read(&decoded,0) || !xed_decoded_inst_mem_written(&decoded,0) ||
++              inst.branch_taken_pc) {
++            std::cerr << "REJECT register CALL outside import-thunk operand profile\n";return false;
++          }
++          operand_reg=xed_reg_enum_t2str(reg);kind=4;call_form="IAT_REG64";
++          pending.insert(inst.next_pc);break;
++        }
+         // Real CALL<M64> reads the dynamic target and stages its stack write.
+         // This authorizes only its byte shape, never the dynamic target value.
+         // The runtime must resolve interface+slot+target before committing CALL.
+@@ -291,8 +342,8 @@
+         } else {
+           if (!FLAGS_aot_vtable_mem64 || xed_gpr_reg_class(base)!=XED_REG_CLASS_GPR64 ||
+               base==XED_REG_RSP || displacement<0 || displacement%8 ||
+-              !std::set<int64_t>{2,5,9,11,12,13,14,15,22,24,33,39,43,44,47,50}.count(displacement/8)) {
+-            std::cerr << "REJECT virtual call outside D3D11 Draw slot-shape profile\n";return false;
++              !std::set<int64_t>{2,8,9,11,12,13,15,22,24,33,43,44,50,110,111}.count(displacement/8)) {
++            std::cerr << "REJECT virtual call outside window slot-shape profile\n";return false;
+           }
+           // XED enum values are deliberately not exposed as runtime register IDs.
+           base_reg=xed_reg_enum_t2str(base);slot=unsigned(displacement/8);
+@@ -338,7 +389,7 @@
+         <<",\"flags_read\":"<<reads<<",\"flags_written\":"<<writes<<",\"flags_undefined\":"<<undefs
+         <<",\"iat_slot_pc\":"<<iat_slot_pc<<",\"call_form\":\""<<call_form
+         <<"\",\"base_reg\":\""<<base_reg<<"\",\"displacement\":"<<displacement
+-        <<",\"slot\":"<<slot<<"}";
++        <<",\"slot\":"<<slot<<",\"operand_reg\":\""<<operand_reg<<"\"}";
+     records.emplace(pc,rec.str());
+   }
+   std::ofstream out(FLAGS_aot_manifest);

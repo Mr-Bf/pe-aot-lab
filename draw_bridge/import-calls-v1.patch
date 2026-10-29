@@ -1,0 +1,99 @@
+--- a/bin/lift/Lift.cpp
++++ b/bin/lift/Lift.cpp
+@@ -88,6 +88,7 @@
+ DEFINE_bool(symbolic_regs, false, "Set registers to a symbolic value");
+ DEFINE_string(aot_manifest,"","AOT instruction manifest");
+ DEFINE_bool(aot_decode_only,false,"Validate and emit manifest only");
++DEFINE_string(aot_iat_slots,"","Explicit authorized import IAT slot VAs, decimal comma-separated");
+ 
+ using Memory = std::map<uint64_t, uint8_t>;
+ 
+@@ -140,6 +141,22 @@
+     "JMP","JB","JBE","JL","JLE","JNB","JNBE","JNL","JNLE","JNO","JNP",
+     "JNS","JNZ","JO","JP","JS","JZ"
+   };
++  std::set<uint64_t> authorized_iat;
++  if (!FLAGS_aot_iat_slots.empty()) {
++    std::istringstream slots(FLAGS_aot_iat_slots); std::string value;
++    if (FLAGS_aot_iat_slots.back()==',') {std::cerr << "REJECT malformed IAT slots\n";return false;}
++    while (std::getline(slots,value,',')) {
++      if (value.empty() || value.find_first_not_of("0123456789")!=std::string::npos) {
++        std::cerr << "REJECT malformed IAT slot\n";return false;
++      }
++      try {
++        auto address=std::stoull(value);
++        if (!address || !authorized_iat.insert(address).second || authorized_iat.size()>1024) {
++          std::cerr << "REJECT invalid/duplicate IAT slot\n";return false;
++        }
++      } catch (...) {std::cerr << "REJECT IAT slot overflow\n";return false;}
++    }
++  }
+   std::set<uint64_t> pending{FLAGS_entry_address};
+   std::map<uint64_t,uint64_t> owner;
+   std::map<uint64_t,std::string> records;
+@@ -201,7 +218,7 @@
+     if(!arch->DecodeInstruction(pc,raw,inst,arch->CreateInitialContext()) || inst.bytes.size()!=length) {
+       std::cerr << "REJECT Remill/XED mismatch\n";return false;
+     }
+-    int kind=0;
++    int kind=0; uint64_t iat_slot_pc=0;
+     switch(inst.category) {
+       case I::kCategoryNormal: case I::kCategoryNoOp: pending.insert(inst.next_pc);break;
+       case I::kCategoryDirectJump: pending.insert(inst.branch_taken_pc);break;
+@@ -212,6 +229,35 @@
+           std::cerr << "REJECT call-to-next special case\n";return false;
+         }
+         kind=1;pending.insert(inst.branch_taken_pc);pending.insert(inst.branch_not_taken_pc);break;
++      case I::kCategoryIndirectFunctionCall: {
++        // Exactly one explicit RIP-relative 64-bit IAT read, plus CALL's
++        // implicit 64-bit stack write. Register-indirect and general memory
++        // calls are not authorized by this compatibility-boundary profile.
++        if (iclass!="CALL_NEAR" || xed_decoded_inst_number_of_memory_operands(&decoded)!=2 ||
++            xed_decoded_inst_get_base_reg(&decoded,0)!=XED_REG_RIP ||
++            xed_decoded_inst_get_index_reg(&decoded,0)!=XED_REG_INVALID ||
++            xed_decoded_inst_get_memory_operand_length(&decoded,0)!=8 ||
++            !xed_decoded_inst_mem_read(&decoded,0) || xed_decoded_inst_mem_written(&decoded,0) ||
++            xed_decoded_inst_get_base_reg(&decoded,1)!=XED_REG_RSP ||
++            xed_decoded_inst_get_index_reg(&decoded,1)!=XED_REG_INVALID ||
++            xed_decoded_inst_get_memory_operand_length(&decoded,1)!=8 ||
++            xed_decoded_inst_mem_read(&decoded,1) || !xed_decoded_inst_mem_written(&decoded,1)) {
++          std::cerr << "REJECT indirect call outside RIP-relative IAT profile\n";return false;
++        }
++        if (pc>UINT64_MAX-length) {std::cerr << "REJECT IAT next-PC overflow\n";return false;}
++        const uint64_t next=pc+length;
++        const int64_t displacement=xed_decoded_inst_get_memory_displacement(&decoded,0);
++        if (displacement>=0) {
++          if (uint64_t(displacement)>UINT64_MAX-next) {std::cerr << "REJECT IAT address overflow\n";return false;}
++          iat_slot_pc=next+uint64_t(displacement);
++        } else {
++          const uint64_t magnitude=uint64_t(-(displacement+1))+1;
++          if (magnitude>next) {std::cerr << "REJECT IAT address underflow\n";return false;}
++          iat_slot_pc=next-magnitude;
++        }
++        if (!authorized_iat.count(iat_slot_pc)) {std::cerr << "REJECT unregistered IAT call slot\n";return false;}
++        kind=1; pending.insert(inst.next_pc); break;
++      }
+       case I::kCategoryFunctionReturn:kind=2;break;
+       default:std::cerr << "REJECT control category\n";return false;
+     }
+@@ -246,7 +292,8 @@
+         <<",\"target_pc\":"<<inst.branch_taken_pc<<",\"fallthrough_pc\":"<<inst.branch_not_taken_pc
+         <<",\"immediate_width\":"<<xed_decoded_inst_get_immediate_width_bits(&decoded)
+         <<",\"immediate\":"<<xed_decoded_inst_get_unsigned_immediate(&decoded)
+-        <<",\"flags_read\":"<<reads<<",\"flags_written\":"<<writes<<",\"flags_undefined\":"<<undefs<<"}";
++        <<",\"flags_read\":"<<reads<<",\"flags_written\":"<<writes<<",\"flags_undefined\":"<<undefs
++        <<",\"iat_slot_pc\":"<<iat_slot_pc<<"}";
+     records.emplace(pc,rec.str());
+   }
+   std::ofstream out(FLAGS_aot_manifest);
+--- a/lib/BC/TraceLifter.cpp
++++ b/lib/BC/TraceLifter.cpp
+@@ -461,6 +461,8 @@
+           ir.CreateBr(GetOrCreateBranchNotTakenBlock());
+ 
+           AddCall(block, intrinsics->function_call, *intrinsics);
++          // native-bridge: preserve the first API/RET-shim failure exactly.
++          gate("aot_should_exit", false);
+           llvm::BranchInst::Create(fall_through_block, block);
+           block = fall_through_block;
+           continue;

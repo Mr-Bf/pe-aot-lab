@@ -1,0 +1,28 @@
+{
+  "derivation": {
+    "changed_offsets": [
+      4672,
+      4673,
+      4674,
+      4675,
+      4676,
+      4677,
+      4678,
+      4680,
+      4681,
+      4682
+    ],
+    "implementation": "window_profile_v1/test_build.py",
+    "kind": "unique equal-length save filename data replacement",
+    "new_hex": "70726f66696c652d736176652e62696e00",
+    "offset": 4672,
+    "old_hex": "696e74656765722d74696c652e62696e00"
+  },
+  "origin": "Self-authored PE AOT Lab fixture; MIT. No game or Steam SDK content.",
+  "original_pe_sha256": "0e1bcf809cb2aa56f23526f3bbd80e9ee233488a1a5b215f1f810b4bb67aa976",
+  "pe_sha256": "254be0c36be784a028db912eb89522a963039a9ec140941fb41ea1643f1730ac",
+  "profile_sha256": "98299470502c13d10f0ed77610f77b14733c720ad2b61759681d1d7408ee8faf",
+  "schema": 1,
+  "scope": "Stored fixture for reproducing PE-to-App construction. Its historical C++-to-PE toolchain is not independently bootstrapped by this source export. No guest or App execution performed by export.",
+  "source_sha256": "f2a7ef57293dc5378bf3e5390a7dfafd5f877503a1b4e010acfec2f7a2ef5c40"
+}

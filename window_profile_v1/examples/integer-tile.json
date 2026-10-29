@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "runtime_contract": "win32-d3d11-tile-v1",
+  "pe_sha256": "0e1bcf809cb2aa56f23526f3bbd80e9ee233488a1a5b215f1f810b4bb67aa976",
+  "callback_rvas": [
+    4096
+  ],
+  "imports": [
+    {
+      "dll": "d3d11.dll",
+      "name": "D3D11CreateDeviceAndSwapChain"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "CloseHandle"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "CreateFileA"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "ExitProcess"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "GetLastError"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "GetModuleHandleA"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "ReadFile"
+    },
+    {
+      "dll": "kernel32.dll",
+      "name": "WriteFile"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "AdjustWindowRectEx"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "CreateWindowExA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "DefWindowProcA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "DestroyWindow"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "DispatchMessageA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "GetClientRect"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "GetMessageA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "PostQuitMessage"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "RegisterClassExA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "SetFocus"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "ShowWindow"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "UnregisterClassA"
+    },
+    {
+      "dll": "user32.dll",
+      "name": "ValidateRect"
+    }
+  ],
+  "observations": {},
+  "save_observation": "integer-tile.bin",
+  "resources": "embedded-pe-only"
+}

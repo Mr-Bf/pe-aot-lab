@@ -1,0 +1,54 @@
+--- a/src/d3d11/d3d11_device.cpp
++++ b/src/d3d11/d3d11_device.cpp
+@@ -65,6 +65,12 @@
+     format_inspector_.Inspect(GetMTLDevice());
+   }
+ 
++  // Finish command encoding/GPU use while context, cache, and Device are alive.
++  // This runs once at terminal device destruction, never on the Draw hot path.
++  ~MTLD3D11DeviceImpl() {
++    context_->WaitUntilGPUIdle();
++  }
++
+   HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid,
+                                            void **ppvObject) override {
+     return container_->QueryInterface(riid, ppvObject);
+--- a/src/d3d11/d3d11_pipeline_cache.cpp
++++ b/src/d3d11/d3d11_pipeline_cache.cpp
+@@ -190,8 +190,6 @@
+ 
+   ShaderCache& scache_;
+ 
+-  task_scheduler<ThreadpoolWork *> scheduler_;
+-
+   MTLD3D11Device *device;
+   StateObjectCache<D3D11_BLEND_DESC1, IMTLD3D11BlendState> blend_states;
+ 
+@@ -216,6 +214,11 @@
+ 
+   std::unordered_map<ManagedShader, std::unique_ptr<MTLCompiledComputePipeline>> pipelines_cs_;
+   dxmt::mutex mutex_cs_;
++
++  // Members are destroyed in reverse declaration order. Stop and join every
++  // compiler worker before destroying the tasks and raw-pointer dependencies.
++  // Keep this last among data members; EVENT/GPU completion alone is not join.
++  task_scheduler<ThreadpoolWork *> scheduler_;
+ 
+   CachedSM50Shader *CreateShader(const void *pBytecode,
+                                  uint32_t BytecodeLength) {
+--- a/src/dxmt/dxmt_tasks.hpp
++++ b/src/dxmt/dxmt_tasks.hpp
+@@ -56,7 +56,12 @@
+ }
+ 
+ template <typename Task> task_scheduler<Task>::~task_scheduler() {
+-  destroyed.store(true);
++  // Serialize the stop predicate with wait(lock, predicate), so notification
++  // cannot be lost between its false predicate test and the atomic wait.
++  {
++    std::unique_lock<dxmt::mutex> lock(worker_mutex_);
++    destroyed.store(true);
++  }
+   worker_cond_.notify_all();
+ 
+   for (auto &worker : workers_) {

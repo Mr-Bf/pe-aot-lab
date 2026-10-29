@@ -1,0 +1,47 @@
+{
+  "packages": {
+    "cmake.tar.gz": {
+      "sha256": "b2a7da6b1f351024c84fe36af692f31a196cb21be74dae8a3f36925467fa676b"
+    },
+    "llvm17.tar.gz": {
+      "sha256": "608b1dc67fe4d80baf65077c69a7c4d58350c800a9e25fce4438f11c90340d9c"
+    },
+    "ninja.tar.gz": {
+      "sha256": "2c07378c1ccb6cfde4bc2e12877c9f365b31c62ddc4ec631421cb80e3a7e1f11"
+    },
+    "remill.tar.gz": {
+      "sha256": "4ba4218566367fad162ed0427ee32221a55134eca2eee5efc2436be67b46885f"
+    },
+    "zstd-1.5.7.tar.gz": {
+      "sha256": "37d7284556b20954e56e1ca85b80226768902e2edabd3b649e9e72c0c9012ee3",
+      "url": "https://github.com/facebook/zstd/archive/refs/tags/v1.5.7.tar.gz"
+    }
+  },
+  "schema": 1,
+  "sources": {
+    "gflags": {
+      "archive": "gflags.tar",
+      "commit": "52e94563eba1968783864942fedf6e87e3c611f4",
+      "sha256": "38bbe32129a501c66a2ff94d4ab85cfd6c11a4e87bdf0e9ca527e1b66d924999",
+      "tree": "c7e5ee308605b4341a2533340872524b75f07992"
+    },
+    "glog": {
+      "archive": "glog.tar",
+      "commit": "7b134a5c82c0c0b5698bb6bf7a835b230c5638e4",
+      "sha256": "d8a1bd52d3a0cab116bf14c7e6ae2d4f179cca368a855f15d68b5679dbf66d33",
+      "tree": "2ea80bbae8012cbe2cfb51acbe121d56319a5d93"
+    },
+    "mbuild": {
+      "archive": "mbuild.tar",
+      "commit": "7c4497f41f576b43a80bb0f8d8452bbcfd58b6e2",
+      "sha256": "2edf1de15f8f8908f516c55d4909a7abc76c92c3d803b9ff13d70d72e35dfa53",
+      "tree": "5240cf4ea48b49ab4983eb5f93890b8e92ff9dac"
+    },
+    "xed": {
+      "archive": "xed.tar",
+      "commit": "dc6bdbe036515c7ef55d3b2d50bafc5232bfe534",
+      "sha256": "921a5d3dc732d5dea9ddc93270e1e39a6b7059d78106b73aac79ba68dae28a00",
+      "tree": "aeee3e5be980a4feaca6427bfaf9c64cdde245c8"
+    }
+  }
+}

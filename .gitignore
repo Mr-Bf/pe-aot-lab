@@ -1,0 +1,32 @@
+# Build evidence and installed dependencies are private/local outputs.
+/build/
+/work/
+/dist/
+/cache/
+/cache-*/
+**/__pycache__/
+*.py[cod]
+.DS_Store
+*.o
+*.obj
+*.bc
+*.a
+*.dylib
+*.so
+*.app/
+*.zip
+*.tar
+*.tar.gz
+*.tar.xz
+*.partial
+*.log
+.env
+.env.*
+# The only checked-in executable fixtures are explicitly documented examples.
+*.exe
+!examples/integer-tile/integer_tile.exe
+
+/.local/
+/.evidence/
+!examples/switch/switch8.exe
+!examples/switch/switch8_variant.exe

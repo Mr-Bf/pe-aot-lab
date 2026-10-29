@@ -1,0 +1,15 @@
+{
+  "profile": "frozen-window-producer",
+  "sources": {
+    "window_bridge/build_lifter.py": "57cc9b040596b45f33b701ef12f8484f41fa52cdedb39829653c5e3fac67b274",
+    "window_bridge/lift.py": "d43e6251be8893647e82d78428b36d7f624b6898f7911e08533fe76dcbfac978",
+    "window_bridge/loader.py": "273787e0870404afe72ff87b2729a0046121ad63b6dbfce9fda9c615cf4e41a0",
+    "window_bridge/aot-profile-v1.patch": "bb856ff4cc060d4d8f3216b3fb0e38f25792f3f7842fbcad327484ec942358a9",
+    "window_bridge/import-calls-v1.patch": "72124561023cce1ba2d5e0a23a03bb25b426b9fe4d8a5ff67b0a1344bba138af",
+    "window_bridge/transactions-v1.patch": "c11a026acf26d7885e9b865c6051200580efe0753c4603e0a1dd242ee60e9988",
+    "window_bridge/vtable-calls-v1.patch": "8ecd7ff203263858de0c322ce4c3be51564e4029b623ec6f407e5d70b15c7ece",
+    "window_bridge/window-calls-v1.patch": "994542f650fae1d1d96ff284b7c44d43bbfec3bcc790ff58cc3678eacff2f46a",
+    "window_bridge/xed-only-v1.patch": "eba973e013c599e0b9c37757055c31f9861ab02a5fcfeb42fe77115a11730346"
+  },
+  "scope": "read-only ancestry; new INC admission and ReadFile import label only"
+}

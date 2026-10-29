@@ -1,0 +1,16 @@
+{
+  "base": "window_bridge/noarg_entry_v1.mm",
+  "base_sha256": "8fb1fd9fc750b4f6b4250e281971c92528555e9b222b136a8f543a0785f278b9",
+  "derived": "window_app_v1/entry.mm",
+  "derived_sha256": "d73ca29d4edb7c8df568b7d64ec3e513b1250188db686e36747101c2f0c8a231",
+  "replacements": [
+    {
+      "old": "static NSString *const kApplication= @\"org.peaotlab.IntegerTileV3\";",
+      "new": "#include \"app_config.h\""
+    },
+    {
+      "old": "fixed v3 App bundle identity required",
+      "new": "configured App bundle identity required"
+    }
+  ]
+}

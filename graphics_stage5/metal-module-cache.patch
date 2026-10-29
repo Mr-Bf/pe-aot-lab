@@ -1,0 +1,11 @@
+--- a/meson.build
++++ b/meson.build
+@@ -116,7 +116,7 @@
+ 
+ metalir_generator = generator(xcrun,
+   output    : [ '@BASENAME@.air'],
+-  arguments : [ '-sdk', 'macosx', 'metal', '-o', '@OUTPUT@', '-c', '@INPUT@', '@EXTRA_ARGS@'],
++  arguments : [ '-sdk', 'macosx', 'metal', '-fmodules-cache-path=' + join_paths(meson.project_build_root(), 'metal-module-cache'), '-o', '@OUTPUT@', '-c', '@INPUT@', '@EXTRA_ARGS@'],
+ )
+ 
+ metallib_generator = generator(xcrun,

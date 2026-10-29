@@ -1,0 +1,143 @@
+--- a/bin/lift/Lift.cpp
++++ b/bin/lift/Lift.cpp
+@@ -89,6 +89,7 @@
+ DEFINE_string(aot_manifest,"","AOT instruction manifest");
+ DEFINE_bool(aot_decode_only,false,"Validate and emit manifest only");
+ DEFINE_string(aot_iat_slots,"","Explicit authorized import IAT slot VAs, decimal comma-separated");
++DEFINE_bool(aot_vtable_mem64,false,"Enable the closed D3D11 Draw MEM64 virtual-call shape profile");
+ 
+ using Memory = std::map<uint64_t, uint8_t>;
+ 
+@@ -137,7 +138,7 @@
+   using I = remill::Instruction;
+   const std::set<std::string> allowed = {
+     "MOV","MOVZX","MOVSX","MOVSXD","LEA","ADD","SUB","XOR","AND","OR",
+-    "TEST","CMP","ROL","INC","DEC","NOP","PUSH","POP","CALL_NEAR","RET_NEAR",
++    "TEST","CMP","ROL","INC","DEC","NOP","PUSH","POP","CALL_NEAR","RET_NEAR","SETZ","CMOVNB",
+     "JMP","JB","JBE","JL","JLE","JNB","JNBE","JNL","JNLE","JNO","JNP",
+     "JNS","JNZ","JO","JP","JS","JZ"
+   };
+@@ -204,7 +205,15 @@
+     }
+     for(unsigned m=0;m<xed_decoded_inst_number_of_memory_operands(&decoded);++m) {
+       if(xed_decoded_inst_mem_read(&decoded,m)&&xed_decoded_inst_mem_written(&decoded,m)) {
+-        std::cerr << "REJECT memory RMW at " << pc << '\n';return false;
++        // Only the observed non-LOCK INC dword [RIP+disp32] is admitted.
++        // Remill still reads then stages one write; runtime owns transaction
++        // preflight/commit. INC preserves CF and does not make it defined.
++        if (iclass!="INC" || m!=0 || xed_decoded_inst_number_of_memory_operands(&decoded)!=1 ||
++            xed_decoded_inst_get_memory_operand_length(&decoded,m)!=4 ||
++            xed_decoded_inst_get_base_reg(&decoded,m)!=XED_REG_RIP ||
++            xed_decoded_inst_get_index_reg(&decoded,m)!=XED_REG_INVALID) {
++          std::cerr << "REJECT memory RMW outside INC RIP m32 at " << pc << '\n';return false;
++        }
+       }
+       if(xed_decoded_inst_get_base_reg(&decoded,m)==XED_REG_INVALID &&
+          xed_decoded_inst_get_index_reg(&decoded,m)==XED_REG_INVALID) {
+@@ -218,7 +227,27 @@
+     if(!arch->DecodeInstruction(pc,raw,inst,arch->CreateInitialContext()) || inst.bytes.size()!=length) {
+       std::cerr << "REJECT Remill/XED mismatch\n";return false;
+     }
++    // The ordinary D3D11 PE needs SETZ SIL/DIL and CMOVNB reg32,reg32.
++    // XED flags_read is checked by the Python CFG definedness gate.
++    // No conditional memory loads, other conditions or SETcc registers.
++    if (iclass=="CMOVNB" && (inst.function!="CMOVNB_GPRv_GPRv_32" ||
++        xed_decoded_inst_number_of_memory_operands(&decoded)!=0 ||
++        xed_gpr_reg_class(xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0))!=XED_REG_CLASS_GPR32 ||
++        xed_gpr_reg_class(xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG1))!=XED_REG_CLASS_GPR32)) {
++      std::cerr << "REJECT CMOVNB outside reg32-reg32 profile\n";return false;
++    }
++    if (iclass=="INC" && xed_decoded_inst_number_of_memory_operands(&decoded) &&
++        inst.function!="INC_MEMv_32") {
++      std::cerr << "REJECT INC memory semantic mismatch\n";return false;
++    }
++    if (iclass=="SETZ" && (inst.function!="SETZ_GPR8" ||
++        xed_decoded_inst_number_of_memory_operands(&decoded)!=0 ||
++        (xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_AL &&
++         xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_SIL && xed_decoded_inst_get_reg(&decoded,XED_OPERAND_REG0)!=XED_REG_DIL))) {
++      std::cerr << "REJECT SETZ outside AL/SIL/DIL-only profile\n";return false;
++    }
+     int kind=0; uint64_t iat_slot_pc=0;
++    std::string call_form, base_reg; int64_t displacement=0; unsigned slot=0;
+     switch(inst.category) {
+       case I::kCategoryNormal: case I::kCategoryNoOp: pending.insert(inst.next_pc);break;
+       case I::kCategoryDirectJump: pending.insert(inst.branch_taken_pc);break;
+@@ -228,13 +257,13 @@
+         if(inst.branch_taken_pc==inst.branch_not_taken_pc) {
+           std::cerr << "REJECT call-to-next special case\n";return false;
+         }
+-        kind=1;pending.insert(inst.branch_taken_pc);pending.insert(inst.branch_not_taken_pc);break;
++        kind=1;call_form="DIRECT";pending.insert(inst.branch_taken_pc);pending.insert(inst.branch_not_taken_pc);break;
+       case I::kCategoryIndirectFunctionCall: {
+-        // Exactly one explicit RIP-relative 64-bit IAT read, plus CALL's
+-        // implicit 64-bit stack write. Register-indirect and general memory
+-        // calls are not authorized by this compatibility-boundary profile.
+-        if (iclass!="CALL_NEAR" || xed_decoded_inst_number_of_memory_operands(&decoded)!=2 ||
+-            xed_decoded_inst_get_base_reg(&decoded,0)!=XED_REG_RIP ||
++        // Real CALL<M64> reads the dynamic target and stages its stack write.
++        // This authorizes only its byte shape, never the dynamic target value.
++        // The runtime must resolve interface+slot+target before committing CALL.
++        if (iclass!="CALL_NEAR" || inst.function!="CALL_NEAR_MEMv_64" ||
++            xed_decoded_inst_number_of_memory_operands(&decoded)!=2 ||
+             xed_decoded_inst_get_index_reg(&decoded,0)!=XED_REG_INVALID ||
+             xed_decoded_inst_get_memory_operand_length(&decoded,0)!=8 ||
+             !xed_decoded_inst_mem_read(&decoded,0) || xed_decoded_inst_mem_written(&decoded,0) ||
+@@ -242,21 +271,35 @@
+             xed_decoded_inst_get_index_reg(&decoded,1)!=XED_REG_INVALID ||
+             xed_decoded_inst_get_memory_operand_length(&decoded,1)!=8 ||
+             xed_decoded_inst_mem_read(&decoded,1) || !xed_decoded_inst_mem_written(&decoded,1)) {
+-          std::cerr << "REJECT indirect call outside RIP-relative IAT profile\n";return false;
++          std::cerr << "REJECT indirect call outside closed MEM64 profile\n";return false;
+         }
+-        if (pc>UINT64_MAX-length) {std::cerr << "REJECT IAT next-PC overflow\n";return false;}
+-        const uint64_t next=pc+length;
+-        const int64_t displacement=xed_decoded_inst_get_memory_displacement(&decoded,0);
+-        if (displacement>=0) {
+-          if (uint64_t(displacement)>UINT64_MAX-next) {std::cerr << "REJECT IAT address overflow\n";return false;}
+-          iat_slot_pc=next+uint64_t(displacement);
++        const auto base=xed_decoded_inst_get_base_reg(&decoded,0);
++        displacement=xed_decoded_inst_get_memory_displacement(&decoded,0);
++        if (base==XED_REG_RIP) {
++          if (pc>UINT64_MAX-length) {std::cerr << "REJECT IAT next-PC overflow\n";return false;}
++          const uint64_t next=pc+length;
++          if (displacement>=0) {
++            if (uint64_t(displacement)>UINT64_MAX-next) {std::cerr << "REJECT IAT address overflow\n";return false;}
++            iat_slot_pc=next+uint64_t(displacement);
++          } else {
++            const uint64_t magnitude=uint64_t(-(displacement+1))+1;
++            if (magnitude>next) {std::cerr << "REJECT IAT address underflow\n";return false;}
++            iat_slot_pc=next-magnitude;
++          }
++          if (!authorized_iat.count(iat_slot_pc)) {std::cerr << "REJECT unregistered IAT call slot\n";return false;}
++          kind=1; call_form="IAT_MEM64";
+         } else {
+-          const uint64_t magnitude=uint64_t(-(displacement+1))+1;
+-          if (magnitude>next) {std::cerr << "REJECT IAT address underflow\n";return false;}
+-          iat_slot_pc=next-magnitude;
++          if (!FLAGS_aot_vtable_mem64 || xed_gpr_reg_class(base)!=XED_REG_CLASS_GPR64 ||
++              base==XED_REG_RSP || displacement<0 || displacement%8 ||
++              !std::set<int64_t>{2,5,9,11,12,13,14,15,22,24,33,39,43,44,47,50}.count(displacement/8)) {
++            std::cerr << "REJECT virtual call outside D3D11 Draw slot-shape profile\n";return false;
++          }
++          // XED enum values are deliberately not exposed as runtime register IDs.
++          base_reg=xed_reg_enum_t2str(base);slot=unsigned(displacement/8);
++          kind=3;call_form="VTABLE_MEM64";
++          if (inst.branch_taken_pc) {std::cerr << "REJECT virtual call has static target\n";return false;}
+         }
+-        if (!authorized_iat.count(iat_slot_pc)) {std::cerr << "REJECT unregistered IAT call slot\n";return false;}
+-        kind=1; pending.insert(inst.next_pc); break;
++        pending.insert(inst.next_pc); break;
+       }
+       case I::kCategoryFunctionReturn:kind=2;break;
+       default:std::cerr << "REJECT control category\n";return false;
+@@ -293,7 +336,9 @@
+         <<",\"immediate_width\":"<<xed_decoded_inst_get_immediate_width_bits(&decoded)
+         <<",\"immediate\":"<<xed_decoded_inst_get_unsigned_immediate(&decoded)
+         <<",\"flags_read\":"<<reads<<",\"flags_written\":"<<writes<<",\"flags_undefined\":"<<undefs
+-        <<",\"iat_slot_pc\":"<<iat_slot_pc<<"}";
++        <<",\"iat_slot_pc\":"<<iat_slot_pc<<",\"call_form\":\""<<call_form
++        <<"\",\"base_reg\":\""<<base_reg<<"\",\"displacement\":"<<displacement
++        <<",\"slot\":"<<slot<<"}";
+     records.emplace(pc,rec.str());
+   }
+   std::ofstream out(FLAGS_aot_manifest);

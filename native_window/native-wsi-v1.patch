@@ -1,0 +1,326 @@
+--- a/src/d3d11/d3d11_swapchain.cpp
++++ b/src/d3d11/d3d11_swapchain.cpp
+@@ -121,6 +121,9 @@
+       IDXGIFactory1 *pFactory, MTLD3D11Device *pDevice, IMTLDXGIDevice *pDXGIDevice,
+        HWND hWnd, const DXGI_SWAP_CHAIN_DESC1 *pDesc,
+       const DXGI_SWAP_CHAIN_FULLSCREEN_DESC *pFullscreenDesc
++#ifndef _WIN32
++      , WMT::Object native_view, WMT::MetalLayer native_layer
++#endif
+   ) :
+       MTLDXGISubObject(pDevice),
+       factory_(pFactory),
+@@ -132,6 +135,10 @@
+       monitor_(wsi::getWindowMonitor(hWnd)),
+       hud(WMT::DeveloperHUDProperties::instance()) {
+ 
++#ifndef _WIN32
++    native_view_ = native_view;
++    layer_weak_ = native_layer;
++#else
+     native_view_ = WMT::CreateMetalViewFromHWND((intptr_t)hWnd, pDevice->GetMTLDevice(), layer_weak_);
+ 
+     if (!native_view_) {
+@@ -139,6 +146,8 @@
+       abort();
+     }
+ 
++#endif
++
+     if constexpr (EnableMetalFX) {
+       scale_factor = std::max(Config::getInstance().getOption<float>("d3d11.metalSpatialUpscaleFactor", 2), 1.0f);
+     }
+@@ -148,8 +157,12 @@
+                                  scale_factor, desc_.SampleDesc.Count));
+ 
+     frame_latency = kSwapchainLatency;
++#ifdef _WIN32
+     present_semaphore_ = CreateSemaphore(nullptr, frame_latency,
+                                          DXGI_MAX_SWAP_CHAIN_BUFFERS, nullptr);
++#else
++    present_semaphore_ = nullptr; // v1 rejects waitable-object and latency controls
++#endif
+ 
+     // without this flag, there is still a DXGIDevice level of frame latency control
+     if (desc_.Flags & DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT) {
+@@ -199,17 +212,27 @@
+     if (desc_.BufferUsage & DXGI_USAGE_UNORDERED_ACCESS)
+       backbuffer_desc_.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+ 
+-    // FIXME: check HRESULT!
++#ifndef _WIN32
++    native_initialization_ = ResizeBuffers(0, desc_.Width, desc_.Height, DXGI_FORMAT_UNKNOWN, desc_.Flags);
++#else
++    // Upstream Wine behavior remains unchanged.
+     ResizeBuffers(0, desc_.Width, desc_.Height, DXGI_FORMAT_UNKNOWN, desc_.Flags);
++#endif
+     if (!fullscreen_desc_.Windowed)
+       EnterFullscreenMode(nullptr);
+   };
+ 
++#ifndef _WIN32
++  HRESULT NativeInitializationStatus() const { return native_initialization_; }
++  HRESULT native_initialization_ = E_FAIL;
++#endif
+   ~MTLD3D11SwapChain() {
+     device_context_->WaitUntilGPUIdle();
+     WMT::ReleaseMetalView(native_view_);
+     native_view_ = {};
++#ifdef _WIN32
+     CloseHandle(present_semaphore_);
++#endif
+   };
+ 
+   HRESULT
+@@ -265,6 +288,9 @@
+   HRESULT
+   STDMETHODCALLTYPE
+   SetFullscreenState(BOOL Fullscreen, IDXGIOutput *pTarget) final {
++#ifndef _WIN32
++    return DXGI_ERROR_UNSUPPORTED;
++#endif
+     Com<IDXGIOutput1> target;
+ 
+     if (pTarget) {
+@@ -480,6 +506,13 @@
+   STDMETHODCALLTYPE
+   ResizeBuffers(UINT BufferCount, UINT Width, UINT Height, DXGI_FORMAT Format,
+                 UINT flags) final {
++#ifndef _WIN32
++    if(flags || (BufferCount && BufferCount!=2) || (bool(Width)!=bool(Height)) || Width>16384 || Height>16384 ||
++       (Format!=DXGI_FORMAT_UNKNOWN && Format!=DXGI_FORMAT_R8G8B8A8_UNORM && Format!=DXGI_FORMAT_B8G8R8A8_UNORM))
++      return DXGI_ERROR_UNSUPPORTED;
++    if(!wsi::isWindow(hWnd))return DXGI_ERROR_INVALID_CALL;
++    device_context_->WaitUntilGPUIdle();
++#endif
+     /* BufferCount ignored */
+     if (Width == 0 || Height == 0) {
+       wsi::getWindowSize(hWnd, &desc_.Width, &desc_.Height);
+@@ -542,6 +575,9 @@
+   HRESULT
+   STDMETHODCALLTYPE
+   ResizeTarget(const DXGI_MODE_DESC *pDesc) final {
++#ifndef _WIN32
++    return DXGI_ERROR_UNSUPPORTED;
++#endif
+     if (!pDesc)
+       return DXGI_ERROR_INVALID_CALL;
+ 
+@@ -738,6 +774,12 @@
+   STDMETHODCALLTYPE
+   Present1(UINT SyncInterval, UINT PresentFlags,
+            const DXGI_PRESENT_PARAMETERS *pPresentParameters) final {
++#ifndef _WIN32
++    if(SyncInterval || PresentFlags || (pPresentParameters &&
++       (pPresentParameters->DirtyRectsCount || pPresentParameters->pScrollRect || pPresentParameters->pScrollOffset)))
++      return DXGI_ERROR_UNSUPPORTED;
++    if(!wsi::isWindow(hWnd))return DXGI_ERROR_INVALID_CALL;
++#endif
+     if (SyncInterval > 4)
+       return DXGI_ERROR_INVALID_CALL;
+ 
+@@ -794,7 +836,9 @@
+         scaler_info.output_height = upscaled->height();
+         ctx.upscale(backbuffer, upscaled, scaler);
+         ctx.present(upscaled, presenter, vsync_duration, state.metadata);
++#ifdef _WIN32
+         ReleaseSemaphore(present_semaphore_, 1, nullptr);
++#endif
+         this->UpdateStatistics(ctx.queue().statistics, ctx.currentFrameId());
+       });
+     } else {
+@@ -804,7 +848,9 @@
+         backbuffer = backbuffer_->texture()
+       ](ArgumentEncodingContext &ctx) mutable {
+         ctx.present(backbuffer, presenter, vsync_duration, state.metadata);
++#ifdef _WIN32
+         ReleaseSemaphore(present_semaphore_, 1, nullptr);
++#endif
+         this->UpdateStatistics(ctx.queue().statistics, ctx.currentFrameId());
+       });
+     }
+@@ -957,6 +1003,9 @@
+   };
+ 
+   HRESULT STDMETHODCALLTYPE SetMaximumFrameLatency(UINT max_latency) override {
++#ifndef _WIN32
++    return DXGI_ERROR_UNSUPPORTED;
++#endif
+     if (max_latency == 0 || max_latency > DXGI_MAX_SWAP_CHAIN_BUFFERS) {
+       return E_INVALIDARG;
+     }
+@@ -1104,6 +1153,18 @@
+     return DXGI_ERROR_INVALID_CALL;
+   InitReturnPtr(ppSwapChain);
+ 
++#ifndef _WIN32
++  if(!wsi::isWindow(hWnd))return DXGI_ERROR_INVALID_CALL;
++  if(pDesc->Flags || pDesc->Stereo || pDesc->SampleDesc.Count!=1 || pDesc->SampleDesc.Quality ||
++     pDesc->BufferCount!=2 || pDesc->SwapEffect!=DXGI_SWAP_EFFECT_FLIP_DISCARD ||
++     pDesc->BufferUsage!=DXGI_USAGE_RENDER_TARGET_OUTPUT || pDesc->Scaling!=DXGI_SCALING_STRETCH ||
++     (pDesc->AlphaMode!=DXGI_ALPHA_MODE_UNSPECIFIED && pDesc->AlphaMode!=DXGI_ALPHA_MODE_IGNORE) ||
++     (bool(pDesc->Width)!=bool(pDesc->Height)) ||
++     (pDesc->Format!=DXGI_FORMAT_R8G8B8A8_UNORM && pDesc->Format!=DXGI_FORMAT_B8G8R8A8_UNORM) ||
++     pDesc->Width>16384 || pDesc->Height>16384 ||
++     (pFullscreenDesc && !pFullscreenDesc->Windowed) ||
++     env::getEnvVar("DXMT_METALFX_SPATIAL_SWAPCHAIN")=="1")return DXGI_ERROR_UNSUPPORTED;
++#else
+   DWORD window_process_id;
+   GetWindowThreadProcessId(hWnd, &window_process_id);
+   if (GetProcessId(GetCurrentProcess()) != window_process_id) {
+@@ -1111,6 +1172,8 @@
+     return E_FAIL;
+   }
+ 
++#endif
++
+   Com<IMTLDXGIDevice> layer_factory;
+   if (FAILED(pDevice->QueryInterface(IID_PPV_ARGS(&layer_factory)))) {
+     ERR("CreateSwapChain: failed to get IMTLDXGIDevice");
+@@ -1121,6 +1184,15 @@
+       pDesc->BufferCount != 1) {
+     WARN("CreateSwapChain: unsupported swap effect ", pDesc->SwapEffect, " with backbuffer size ", pDesc->BufferCount);
+   }
++#ifndef _WIN32
++  WMT::MetalLayer native_layer;
++  WMT::Object native_view=WMT::CreateMetalViewFromHWND((intptr_t)hWnd,pDevice->GetMTLDevice(),native_layer);
++  if(!native_view || !native_layer)return E_FAIL;
++  auto *chain=new MTLD3D11SwapChain<false>(pFactory,pDevice,layer_factory.ptr(),hWnd,pDesc,pFullscreenDesc,native_view,native_layer);
++  HRESULT hr=chain->NativeInitializationStatus();
++  if(FAILED(hr)){chain->Release();return hr;}
++  *ppSwapChain=chain;
++#else
+   if (env::getEnvVar("DXMT_METALFX_SPATIAL_SWAPCHAIN") == "1") {
+     if (pDevice->GetMTLDevice().supportsFXSpatialScaler()) {
+       *ppSwapChain = new MTLD3D11SwapChain<true>(
+@@ -1134,6 +1206,7 @@
+   *ppSwapChain = new MTLD3D11SwapChain<false>(
+       pFactory, pDevice, layer_factory.ptr(), hWnd, pDesc, pFullscreenDesc
+   );
++#endif
+   return S_OK;
+ };
+ 
+--- a/src/dxgi/dxgi_factory.cpp
++++ b/src/dxgi/dxgi_factory.cpp
+@@ -115,6 +115,10 @@
+       return DXGI_ERROR_UNSUPPORTED;
+     }
+ 
++#ifndef _WIN32
++    if(!wsi::isWindow(hWnd))return DXGI_ERROR_INVALID_CALL;
++    if(pRestrictToOutput)return DXGI_ERROR_UNSUPPORTED;
++#endif
+     // Make sure the back buffer size is not zero
+     DXGI_SWAP_CHAIN_DESC1 desc = *pDesc;
+ 
+--- a/src/nativemetal/meson.build
++++ b/src/nativemetal/meson.build
+@@ -1,4 +1,5 @@
+ winemetal_src = [
++  'native_wsi.c',
+   '../winemetal/winemetal_thunks.c',
+   '../winemetal/unix/winemetal_unix.c',
+   '../winemetal/unix/cache.c',
+--- a/src/util/wsi_window_headless.cpp
++++ b/src/util/wsi_window_headless.cpp
+@@ -12,20 +12,22 @@
+ #include "wsi_monitor.hpp"
+ 
+ #include "util_string.hpp"
++#include "native_wsi.h"
+ #include "log/log.hpp"
+ 
+ namespace dxmt::wsi {
+ 
+-void getWindowSize(HWND hWindow, uint32_t *pWidth, uint32_t *pHeight) {
+-  if (pWidth)
+-    *pWidth = 1024;
+-
+-  if (pHeight)
+-    *pHeight = 1024;
++static bool query(HWND window, DXMTNativeWindowInfoV1 &info) {
++  info = {sizeof info, 0, 0, 0};
++  return DXMTNativeQueryWindowV1((uint64_t)(uintptr_t)window, &info) == 1;
+ }
+-
+-void resizeWindow(HWND hWindow, DXMTWindowState *pState, uint32_t width,
+-                  uint32_t height) {
++void getWindowSize(HWND window, uint32_t *width, uint32_t *height) {
++  DXMTNativeWindowInfoV1 info;bool valid=query(window,info);
++  if(width)*width=valid?info.width_pixels:0;
++  if(height)*height=valid?info.height_pixels:0;
++}
++void resizeWindow(HWND window, DXMTWindowState *state, uint32_t width,uint32_t height) {
++  DXMTNativeResizeWindowV1((uint64_t)(uintptr_t)window,width,height);
+ }
+ 
+ bool setWindowMode(HMONITOR hMonitor, HWND hWindow, const WsiMode &mode) {
+@@ -51,14 +53,14 @@
+   return 0;
+ }
+ 
+-bool isWindow(HWND hWindow) { return true; }
++bool isWindow(HWND hWindow) { DXMTNativeWindowInfoV1 info;return query(hWindow,info); }
+ 
+ void updateFullscreenWindow(HMONITOR hMonitor, HWND hWindow,
+                             bool forceTopmost) {
+ }
+ 
+-bool isForeground(HWND hWindow) { return true; }
++bool isForeground(HWND hWindow) { DXMTNativeWindowInfoV1 info;return query(hWindow,info) && (info.flags & DXMT_WSI_FOREGROUND); }
+ 
+-bool isMinimized(HWND hWindow) { return false; }
++bool isMinimized(HWND hWindow) { DXMTNativeWindowInfoV1 info;return !query(hWindow,info) || (info.flags & DXMT_WSI_MINIMIZED); }
+ 
+ } // namespace dxmt::wsi
+--- a/src/winemetal/unix/winemetal_unix.c
++++ b/src/winemetal/unix/winemetal_unix.c
+@@ -1,4 +1,9 @@
+ #include <stdatomic.h>
++#ifdef DXMT_NATIVE
++#include "native_wsi.h"
++extern uintptr_t DXMTNativeCreateMetalViewV1(uint64_t,uintptr_t,uintptr_t *);
++extern void DXMTNativeReleaseMetalViewV1(uintptr_t);
++#endif
+ #include <dlfcn.h>
+ #import <Cocoa/Cocoa.h>
+ #import <ColorSync/ColorSync.h>
+@@ -1684,6 +1689,12 @@
+ static NTSTATUS
+ _CreateMetalViewFromHWND(void *obj) {
+   struct unixcall_create_metal_view_from_hwnd *params = obj;
++#ifdef DXMT_NATIVE
++  uintptr_t layer = 0;
++  params->ret_view = DXMTNativeCreateMetalViewV1((uint64_t)params->hwnd, (uintptr_t)params->device, &layer);
++  params->ret_layer = layer;
++  return params->ret_view ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
++#else
+ 
+   struct macdrv_win_data *(*pfn_get_win_data)(HWND hwnd) = NULL;
+   void (*pfn_release_win_data)(struct macdrv_win_data *data) = NULL;
+@@ -1716,11 +1727,16 @@
+   }
+ 
+   return STATUS_SUCCESS;
++#endif
+ }
+ 
+ static NTSTATUS
+ _ReleaseMetalView(void *obj) {
+   struct unixcall_generic_obj_noret *params = obj;
++#ifdef DXMT_NATIVE
++  DXMTNativeReleaseMetalViewV1((uintptr_t)params->handle);
++  return STATUS_SUCCESS;
++#else
+ 
+   void (*pfn_macdrv_view_release_metal_view)(macdrv_metal_view v) = NULL;
+ 
+@@ -1735,6 +1751,7 @@
+     pfn_macdrv_view_release_metal_view((macdrv_metal_view)params->handle);
+ 
+   return STATUS_SUCCESS;
++#endif
+ }
+ 
+ static NTSTATUS

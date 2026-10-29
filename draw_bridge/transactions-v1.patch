@@ -1,0 +1,48 @@
+--- a/lib/BC/TraceLifter.cpp
++++ b/lib/BC/TraceLifter.cpp
+@@ -350,12 +350,37 @@
+       std::ignore = arch->DecodeInstruction(inst_addr, inst_bytes, inst,
+                                             this->arch->CreateInitialContext());
+ 
++      // aot-stage3: transaction boundaries exist before any optimizer sees IR.
++      auto gate = [&](const char *name, bool pc_argument) {
++        llvm::IRBuilder<> ir(block);
++        auto memory = LoadMemoryPointer(block, *intrinsics);
++        llvm::SmallVector<llvm::Type *, 3> types;
++        llvm::SmallVector<llvm::Value *, 3> args;
++        if (pc_argument) {
++          types.push_back(state_ptr->getType());
++          types.push_back(word_type);
++          args.push_back(state_ptr);
++          args.push_back(LoadNextProgramCounter(block, *intrinsics));
++        }
++        types.push_back(memory->getType()); args.push_back(memory);
++        auto callee = module->getOrInsertFunction(name,
++            llvm::FunctionType::get(ir.getInt32Ty(), types, false));
++        auto status = ir.CreateCall(callee, args);
++        auto stop = llvm::BasicBlock::Create(context, "aot.stop", func);
++        auto next = llvm::BasicBlock::Create(context, "aot.continue", func);
++        ir.CreateCondBr(ir.CreateICmpNE(status, ir.getInt32(0)), stop, next);
++        llvm::IRBuilder<> out(stop); out.CreateRet(memory);
++        block = next;
++      };
++      gate("aot_begin", true);
+       auto lift_status =
+           inst.GetLifter()->LiftIntoBlock(inst, block, state_ptr);
+       if (kLiftedInstruction != lift_status) {
+         AddTerminatingTailCall(block, intrinsics->error, *intrinsics);
+         continue;
+       }
++
++      gate("aot_commit", true);
+ 
+       // Handle lifting a delayed instruction.
+       auto try_delay = arch->MayHaveDelaySlot(inst);
+@@ -490,6 +515,7 @@
+             }
+             auto target_trace = get_trace_decl(inst.branch_taken_pc);
+             AddCall(block, target_trace, *intrinsics);
++            gate("aot_should_exit", false);
+           }
+ 
+           const auto ret_pc_ref = LoadReturnProgramCounterRef(block);
