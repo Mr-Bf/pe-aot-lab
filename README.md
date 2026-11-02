@@ -4,6 +4,8 @@
 
 这是一个以正确性与性能为目标的工程研究原型。当前已跑通自制窗口程序的原生 App 闭环；还不能转换一般 Windows／Steam 单机游戏。公开仓库包含源码、固定依赖配置、补丁和小型自产样例，完整本机实验日志与工具链缓存不在仓库中。
 
+**2026-11-02：公开源码同机独立目录完整构建与运行已通过。** 公开提交 `99a271d` 的499文件从本地Git archive导出后，使用既有固定缓存新建全部provider和App，完成144条被接受命令；新App原路径与搬移两轮Cocoa存取档正常。当前源码另追加5个doctor文件及2份报告，共506文件；新增doctor单独验收，不计入 `99a271d` 的构建证据。见 [独立目录复现](docs/PUBLIC_REPRODUCTION_V1.md)。本轮不是网络clone、冷获取、另一台干净机器或二进制逐字节可重复构建验证。
+
 ## 实现路线
 
 ```text
@@ -27,9 +29,11 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 
 | 能力 | 当前证据与边界 |
 | --- | --- |
-| 固定依赖获取和离线构建 | CPU、图形缓存校验与独立构建入口；一次完整 install 实际完成 139 条构建命令。CPU 使用固定 LLVM 17 预编译工具包；Remill／依赖及图形 LLVM／DXMT 另行编译。 |
+| 固定依赖获取和离线构建 | CPU、图形缓存校验与独立构建入口；公开 `99a271d` 独立目录完整install接受144条命令。CPU使用固定LLVM17预编译工具包；Remill/XED等依赖及图形LLVM15/DXMT实际重新编译。较早install-v1的139条记录另保留。 |
 | 自制 PE 到原生 App | 显式 PE/profile → 静态提升 → O0/O3 ARM64 对象 → App 打包和验证。较早样本产物已完成窗口输入、存档恢复、保存及正常退出，也验证了搬移路径。 |
+| 公开源码独立目录复现 | 同机、本地archive、既有固定缓存；五阶段完整构建，新CPU/switch/graphics/App均未复用旧安装。正式reader实读5459文件，另审1700文件；新callback32次，新App原路径/搬移两轮正常，790文件运行复核。首次超时及额外实例清理单独保留。 |
 | v6完整离线安装与恢复 | 从固定缓存实际完成CPU41、switch5、graphics29、App69条被接受命令；图形SIGTERM后保留失败，复用重验的CPU/switch并在新目录重建。5722文件独立读验；新App原路径/搬移两轮正常，32次callback两基址/O0/O3通过。 |
+| v6安装前诊断 | 新doctor以11组PASS/FAIL/SKIPPED汇总前置条件，全部通过退出0，否则退出2；不创建work-root/out，不启动builder/App。14项实现测试及14项独立反例各普通/-O通过；它不是构建或源码闭包证明。 |
 | 较早完整 install-v1 产物 | 构建与独立静态复核通过；首次交互尝试因桌面操作延迟超时，尚未取得该产物的正常退出验收。不能借用旧 App 的成功替代。 |
 | 有限 switch 正式 App | schema2 profile → 显式 window-rel32-v1 provider → 全根证明 → 完整 ARM64 App；真实 RIGHT 路径调用只读表并影响绘制/存档。两轮原路径/搬移 Cocoa 正常退出，790文件独立复核；32次真实 WndProc 两基址/O0/O3执行通过。单表叶函数范围，不代表一般间接跳转。 |
 | 早期 switch 原 x86 对照 | 独立 scalar 切片的288次正常ARM与144次原PE字节对照保留；本轮窗口callback不是新的原x86差分。 |
@@ -42,12 +46,13 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 
 ## 开发入口
 
-当前完整入口为 **`migration_install_v2 plan/install/resume`**，从固定缓存构建CPU base、switch overlay、图形和v6 App。已实际验证图形阶段受控中断、重验复用CPU/switch、新图形attempt和新App两轮真实Cocoa运行；见 [安装与恢复](migration_install_v2/README.md)及[本轮验收](docs/MIGRATION_INSTALL_V2.md)。
+当前完整入口为 **`migration_install_v2 plan/install/resume`**，从固定缓存构建CPU base、switch overlay、图形和v6 App。公开 `99a271d` 已完成[同机独立目录整链构建与新产品运行](docs/PUBLIC_REPRODUCTION_V1.md)；较早图形受控中断、重验复用与新attempt恢复见 [安装入口](migration_install_v2/README.md)及[恢复验收](docs/MIGRATION_INSTALL_V2.md)。新增 [doctor](migration_doctor_v1/README.md)只用于分项前置诊断。
 
-低层已有provider构建入口为 **`migration_v6`**，使用 `examples/window-switch` 的新profile。普通CPU provider先生成switch driver overlay，再与既有图形provider生成App。overlay保留对原CPU provider绝对路径的依赖，不能单独搬移，也不是完整provider；生成后的App已另验搬移运行。旧install-v1仍只构建原profile。v2已接通该完整链；下一项是公开源码独立目录整链native复现，详见剩余清单。
+低层已有provider构建入口为 **`migration_v6`**，使用 `examples/window-switch` 的新profile。普通CPU provider先生成switch driver overlay，再与既有图形provider生成App。overlay保留对原CPU provider绝对路径的依赖，不能单独搬移，也不是完整provider；生成后的App已另验搬移运行。旧install-v1仍只构建原profile。下一项固定CPU/ABI热点工作负载，测量实际命中与成本，再在差分门禁下优化；干净机器和性能仍另设验收，详见剩余清单。
 
 - [正式窗口 switch 开发与复现](window_switch_v1/README.md)及[实际验收](docs/WINDOW_SWITCH_V1.md)。
 - [真实运行监督与独立复核](migration_run_v3/README.md)：单进程、OS事件与同档恢复分别记录。
+- [v6安装前诊断](migration_doctor_v1/README.md)及[诊断验收](docs/MIGRATION_DOCTOR_V1.md)：11组只读前置观测，不代替安装门禁。
 - [早期 scalar switch 复现入口](switch_aot_v1/README.md)：单表叶函数实验，独立于正式窗口构建链。
 - [早期研究](docs/RESEARCH.md)与[反证审查](docs/REVIEW.md)：保留研究时点，不作为当前实现能力声明。
 - [剩余任务与验收门槛](REMAINING.md)：按能力与证据推进，不按周数或估算百分比表示完成度。
@@ -84,6 +89,14 @@ python3.13 -m migration_cache_v2 prepare-cpu \
 python3.13 -m portable_graphics_v2 prepare \
   --cache "$PWD/.local/graphics-cache" --out "$PWD/.local/graphics-fetch"
 
+python3.13 -B -m migration_doctor_v1 \
+  --cpu-cache "$PWD/.local/cpu-cache" \
+  --graphics-cache "$PWD/.local/graphics-cache" \
+  --pe "$PWD/examples/window-switch/switch_tile.exe" \
+  --profile "$PWD/examples/window-switch/profile.json" \
+  --identifier org.peaotlab.install.switch.example.v1 \
+  --work-root "$PWD/.local/install-work" --out "$PWD/.local/install" --jobs 2
+
 python3.13 -m migration_install_v2 plan \
   --cpu-cache "$PWD/.local/cpu-cache" \
   --graphics-cache "$PWD/.local/graphics-cache" \
@@ -93,7 +106,9 @@ python3.13 -m migration_install_v2 plan \
   --work-root "$PWD/.local/install-work" --out "$PWD/.local/install" --jobs 2
 ```
 
-预检通过后，以同样参数把 `plan` 改为 `install` 开始构建；预检不会替你完成 native 构建或启动验证。使用 `migration_v6 verify <结果中的product目录>` 复核产物，安装/恢复的独立读验见 `migration_install_v2.review`，实际运行、交互与性能需要分别验收。
+doctor输出stdout JSON，`--out`是待安装目录，不是报告文件；使用 `-B` 防止Python字节码写入，Apple工具可能维护系统缓存。doctor只记录前置观测和磁盘源码快照，不证明运行中加载的代码身份或全部资源完整。
+
+预检通过后，以同样参数把 `plan` 改为 `install` 开始构建；预检不会替你完成native构建或启动验证。使用 `migration_v6 verify <结果中的product目录>` 复核产物；正常首次安装的独立reader中，`--installation`和`--session`都指向本次安装目录，只有实际恢复才使用新resume目录。按[运行入口](migration_run_v3/README.md)使用本次返回的product和receipt SHA，替换旧 `app-04` 示例；实际运行、交互与性能分别验收。
 
 当前源码发行的无工具链检查与完整 native 验收是不同层级。许多历史实验测试依赖私有保留的原始构建证据，不能在刚 clone 后运行全仓 `unittest discover` 并把缺文件当成兼容性失败。以本仓库明确列出的复现命令和前提为准。
 

@@ -1,4 +1,8 @@
-# 受限 switch 切片验证记录
+# 验证记录
+
+最新验收日期：2026-11-02。公开 `99a271d` 的499文件已完成同机独立目录整链native构建与新App运行；新增doctor另经测试与实际诊断。当前源码506文件不等于这506文件都重新做过完整构建。本页以下分别保留各冻结版本、首次失败和验证边界；原始本机现场不随源码上传。
+
+## 历史受限 switch 切片（2026-10-29）
 
 验收日期：2026-10-29。实际环境：Apple Silicon M2／macOS。以下是本机实验的摘要；原始命令、stdout/stderr、完整状态、映像和逐例二进制响应保留在本地实验库，未随公开源码上传。公开入口测试可以使用登记的自产 PE 与 XED packet 重跑，不能据此声称完整 native 重建已在另一机器通过。
 
@@ -26,7 +30,7 @@
 摘要用于识别记录，不替代原始证据或审查。当前Go结论仅为继续受限静态翻译开发；通用游戏兼容、整链高性能和完整发行仍未验收。
 
 
-# 正式窗口 switch 集成追加（2026-10-29）
+## 正式窗口 switch 集成追加（2026-10-29）
 
 本轮记录见 [完整验收](docs/WINDOW_SWITCH_V1.md)。新schema2/capability全根证明已生成实际App；原路径与搬移副本两次直接bundle executable启动，Cocoa系统事件触发switch 2/1次，steps 1197/917，分别保存position/moves/draws=4/3/5和5/4/8，均正常退出、TEST_QUEUE=0、proc_translated=0。第二轮实际绘制3次，draws=8为存档累计值。独立790文件复核普通与优化结果SHA相同。
 
@@ -35,10 +39,33 @@
 公开源码包含新模块、补丁与自产PE；完整本机现场仍不上传。没有Finder/LaunchServices、物理键盘、像素等价、长测、第二台干净机器或性能优势结论；旧install-v1尚未自动安装新switch overlay。
 
 
-# v6完整离线安装与恢复追加（2026-10-29）
+## v6完整离线安装与恢复追加（2026-10-29）
 
 从固定缓存新建CPU、overlay、graphics、App，真实受控SIGTERM保留原图形失败；重验复用CPU/switch后新图形目录重建并完成五阶段。被接受builder记录144条构建/验证命令；独立5722文件读验普通/-O摘要相同。观察器最初ps权限失败、接管孤儿退出码null、旧UNOBSERVABLE与后来的ABSENT分别保存，没有抹除失败。
 
 本轮新产物32次ARM64 callback通过；原路径PID40550 steps1229/switch2，搬移PID40998 steps949/switch1，正常保存position/moves/draws=4/3/5→5/4/8；独立790文件运行读验普通/-O一致。属于直接bundle执行与工具OS事件，不是Finder/LaunchServices、物理键盘、像素、长测或性能验收。
 
 新installer27项（每模式含1个受控Python锁child）与reader13项普通/-O通过；源码默认队列126项。完整证据、实际失败与复现入口见 [验收记录](docs/MIGRATION_INSTALL_V2.md)。公开源码检查不是另一台干净机器native验证，原始现场不随源码发行。
+
+## 公开源码独立目录完整复现（2026-11-02）
+
+构建来源为公开提交 `99a271db68ab97c059af376ce4bd5ecca8bb79a1` 的499文件，从本地Git archive导出并逐项核SHA/大小。既有固定CPU/图形缓存、同一M2/Python/Xcode/SDK下新建CPU、switch、graphics provider和v6 App，未把旧已安装provider作为本轮构建。固定输入仍为 `examples/window-switch/switch_tile.exe`，新identifier为 `org.peaotlab.publicrepro39cfa624.v1`。
+
+| 验收 | 实际结果 |
+| --- | --- |
+| 完整安装 | CPU41、switch5、graphics29、App69，共144条被接受命令；五阶段首次完成，本轮没有安装恢复/重试。 |
+| 独立静态核对 | 正式reader普通/-O逐字节一致，实读5459文件；额外标准库审查实读1700文件，核对实际命令和新provider/产品来源。 |
+| callback | 两PE基址×O0/O3×8位置，共32次真实ARM64 callback；没有重跑原始x86 oracle或将其计成32次App。 |
+| 新App正常运行 | 原路径PID4630、搬移PID4688均退出0、TEST_QUEUE=0、proc_translated=0；steps/switch为1165/2与917/1，存档position/moves/draws为4/3/5→5/4/8。790文件运行reader普通/-O一致。 |
+
+首次PID4433因桌面绑定调用超过600秒监督期限而超时，返回-15，没有方向键输入；之后的同路径PID4571经精确身份核对后单独终止，OS退出码null、启动原因未证实，存档仍为空。后续正常运行使用新证据目录，不覆盖首次失败。两轮成功来自Cocoa系统自动化事件，不是物理键盘、Finder/LaunchServices、像素等价或长测验收。
+
+详情与证据摘要见 [完整复现报告](docs/PUBLIC_REPRODUCTION_V1.md)。本轮证明同机公开源码配合既有固定缓存可新建并运行，不是网络clone、冷获取、第二台干净机器或App二进制逐字节可重复构建；约1303.884秒的一次构建耗时也不是运行性能结论。
+
+## 新v6前置诊断单独验收（2026-11-02）
+
+当前发行另追加5个 `migration_doctor_v1` 文件及2份报告，共506文件；doctor不属于上述499文件构建版本。实现测试与独立反例各14方法、普通/-O通过，公开副本的14项测试另已两模式通过；本轮没有重跑旧126项队列。
+
+实际正例11PASS、退出0；负例损坏临时CPU缓存和不存在PE产生7PASS/3FAIL/1SKIPPED、退出2，图形缓存仍独立通过，work-root/out均未创建。两次诊断各9条Apple发现查询，共18条，没有编译、guest或App运行。独立审查最终轮含4个隔离Python CLI child验证有/无 `-B` 的字节码行为；较早4个另保留，不称全mock或零进程。
+
+使用 `-B` 时只读项目文件和字节码；Apple工具可能更新系统缓存。11组只报告前置观测：现有实现清单不保证全部资源完整，doctor源摘要不证明加载代码或全程不变。见 [诊断验收](docs/MIGRATION_DOCTOR_V1.md)。下一项是固定CPU/ABI工作负载测实际命中与成本，干净机器和性能仍未验。

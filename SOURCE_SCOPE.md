@@ -2,11 +2,15 @@
 
 当前完整安装入口为 `migration_install_v2`，窗口switch低层入口为 `migration_v6`、`window_switch_v1` 与 `migration_run_v3`；基础及旧profile入口为 `migration_cache_v2`、`portable_graphics_v2`、`portable_lifter_v1`、`migration_v5`、`migration_install_v1`。保留被这些模块复用的旧源码目录、所有实际补丁、锁、C/C++ runtime 和 shader header。
 
-此目录是独立源码快照，没有原仓库 `.git`、`build/`、`work/`、运行日志或已安装 provider。唯一初始二进制例外是 `examples/integer-tile/integer_tile.exe`，其第一方来源与 SHA 已记录。README 与剩余工作清单由主维护者单独撰写；本轮收口的 switch 实验源码已单独同步。
+当前源码发行506文件：公开 `99a271d` 的499文件加上5个 `migration_doctor_v1` 文件和2份验收报告。完整native构建与新App运行绑定499文件的原提交；新增doctor单独完成测试和实际预检，不能将其追加推断为506文件重新完整构建通过。见 [公开源码复现](docs/PUBLIC_REPRODUCTION_V1.md)及[doctor验收](docs/MIGRATION_DOCTOR_V1.md)。
+
+此源码导出不携带原私有仓库Git历史、`build/`、`work/`、运行日志或已安装provider。四个第一方PE例外为 `examples/integer-tile/integer_tile.exe`、`examples/switch/switch8.exe`、`examples/switch/switch8_variant.exe`、`examples/window-switch/switch_tile.exe`，各自来源和SHA在样例目录登记；不包含第三方游戏二进制。README与剩余工作清单单独维护，历史实验源码按发行范围保留。
 
 部分保留的旧 helper/test 仍引用历史 evidence，它们用于理解既有边界，不属于独立公开仓库的默认测试入口。尤其 `portable_app_v1/test_lift.py`、`test_producer.py`、`migration_v5/test_boundaries.py`、`migration_install_v1/test_install.py` 需要历史产品；请勿把全仓库 unittest discover 当作自包含 CI。公开排除依赖私有 build parser 的 `portable_graphics_v2/review_build.py`、历史公开获取 reviewer，以及包含本机绝对路径的 `window_profile_v1/derivation.json`。
 
 核心 CLI help、样例 analyze 和静态资源闭包 smoke 只说明该源码导出的入口与资源完整；不是重新编译所有 C++、运行 App、干净机器或性能验证。历史 fixture C++→PE 生成入口仍有旧工具链依赖，公开示例提供了已登记自产 PE 供重现迁移构建。
+
+公开 `99a271d` 后续已从本地Git archive导出到同机独立目录，使用既有固定缓存新建全部provider/App并完成运行；这一实际native证据与上述源码smoke分开。它不是联网clone/冷下载、另一机器或bit-repro验证。安装器公开实现身份清单为210项，不要求与私有历史302项相等；独立审查核对交集摘要及实际命令来源，没有将差集当成未验证的兼容能力。
 
 
 ## 历史研究与后续追加
@@ -35,3 +39,9 @@
 追加migration_install_v2生产协调器、独立reader、边界测试及显式recovery_probe/recovery_attach实验。安装器捕获自身实际Python闭包及非Python构建资源；独立reader/test/probe不混入生产实现身份。恢复实验会针对自行核对的本次图形worker发SIGTERM，属于显式测试入口而非自动重试，不作为普通安装必经步骤。
 
 公开不携带缓存、安装provider、App、运行日志或用户AppData。真实M2从固定缓存的构建/恢复/运行证据与公开源码Python检查分别记录，不能互相替代。
+
+## v6安装前诊断追加
+
+追加 `migration_doctor_v1` 的三个生产Python文件、README及独立测试文件，以及两份验收报告。诊断器调用现有v2只读验证入口，分别报告11组PASS/FAIL/SKIPPED，stdout JSON，不创建安装work-root/out，不自动启动builder或App。
+
+项目文件只读承诺按文档的 `-B` 或 `PYTHONDONTWRITEBYTECODE=1` 调用解释；普通无-B运行可生成pycache，Apple发现可能维护系统缓存。implementation清单是扫描所得，不是必需资源完整性证明；doctor自身摘要是报告时的文件快照，不是加载代码身份或全过程稳定性证明。预检完成不能绕过安装准入，也不新增ISA/ABI/图形兼容范围。
