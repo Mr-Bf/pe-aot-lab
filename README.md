@@ -4,7 +4,7 @@
 
 这是一个以正确性与性能为目标的工程研究原型。当前已跑通自制窗口程序的原生 App 闭环；还不能转换一般 Windows／Steam 单机游戏。公开仓库包含源码、固定依赖配置、补丁和小型自产样例，完整本机实验日志与工具链缓存不在仓库中。
 
-**2026-11-02：无选择器独立产物验证通过。** 64份正常输出、2912份完整预算记录和96个交替进程采样完成独立复核。各场景配对中位耗时下降5.9%–8.6%，189/192组更快，慢例保留；下一步版本化runtime接入与新App回归。正式App未修改，不代表游戏提速。见 [本轮报告](docs/WINDOW_CALLBACK_SINGLE_V1.md)。公开源码新增10个模块文件和1份报告，共538文件。
+**2026-11-02：查找优化已接入正式运行时，新App回归通过。** `migration_v7`完成69条构建命令；新对象1488次回调内核执行（32正常＋1456完整预算）及原路径/搬移两轮Cocoa存取正常退出。三层独立普通/-O复核分别读取3806、5148、805个文件身份，86项测试通过。仍无App/FPS或真实游戏性能结论。见 [本轮报告](docs/WINDOW_LOOKUP_V1.md)。公开源码新增25个模块文件和1份报告，共564文件。
 
 **已验构建基线：** 公开提交 `99a271d` 的499文件从本地Git archive导出后，使用既有固定缓存新建全部provider和App，144条被接受命令和两轮Cocoa存取/搬移通过；见 [独立目录复现](docs/PUBLIC_REPRODUCTION_V1.md)。后续doctor与本轮基准单独验收，不把新增源码算成499文件整链重建证据，也不等同于网络clone、冷获取、另一台机器或二进制逐字节可重复构建。
 
@@ -40,6 +40,7 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 | 有限 switch 正式 App | schema2 profile → 显式 window-rel32-v1 provider → 全根证明 → 完整 ARM64 App；真实 RIGHT 路径调用只读表并影响绘制/存档。两轮原路径/搬移 Cocoa 正常退出，790文件独立复核；32次真实 WndProc 两基址/O0/O3执行通过。单表叶函数范围，不代表一般间接跳转。 |
 | 早期 switch 原 x86 对照 | 独立 scalar 切片的288次正常ARM与144次原PE字节对照保留；本轮窗口callback不是新的原x86差分。 |
 | 标量／内存／ABI | 多项组件差分和拒绝测试已通过；它们各自的支持范围不同，不等于通用 Windows 运行时。 |
+| v7生产lookup与新App | 仅替换instruction查找，状态快照/权限/回滚保留；650产品文件、新callback完整预算、两轮真实Cocoa及同档恢复通过。复用已有provider，未重建工具链或测App性能。 |
 | 性能 | 已有局部微基准和资源记录；尚无代表性游戏性能、Wine＋Rosetta 同场景对比或整体提速结论。 |
 
 当前窗口样例限制包括单 guest worker、显式回调入口、固定的 Win32／COM／D3D11 契约、640×360 画面及限定 shader／资源参数。未知指令、未证明的跳转、导入或运行机制会明确拒绝。
@@ -48,9 +49,11 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 
 ## 开发入口
 
-当前完整入口为 **`migration_install_v2 plan/install/resume`**，从固定缓存构建CPU base、switch overlay、图形和v6 App。公开 `99a271d` 已完成[同机独立目录整链构建与新产品运行](docs/PUBLIC_REPRODUCTION_V1.md)；较早图形受控中断、重验复用与新attempt恢复见 [安装入口](migration_install_v2/README.md)及[恢复验收](docs/MIGRATION_INSTALL_V2.md)。新增 [doctor](migration_doctor_v1/README.md)只用于分项前置诊断。
+本轮已有provider入口是 **`migration_v7 analyze/build/verify`**，输出 `window-lookup-v7` App；[构建入口](migration_v7/README.md)、[生产lookup与callback检查](window_lookup_v1/README.md)及[新版运行监督](migration_run_v4/README.md)分别记录构建、内核与实际App证据。旧 `migration_install_v2`／doctor仍针对v6，尚未自动接入v7。下一项是完整外层ABI性能、代表性负载和v7安装/诊断接线，见[剩余工作](REMAINING.md)。
 
-低层已有provider构建入口为 **`migration_v6`**，使用 `examples/window-switch` 的新profile。普通CPU provider先生成switch driver overlay，再与既有图形provider生成App。overlay保留对原CPU provider绝对路径的依赖，不能单独搬移，也不是完整provider；生成后的App已另验搬移运行。旧install-v1仍只构建原profile。下一项固定CPU/ABI热点工作负载，测量实际命中与成本，再在差分门禁下优化；干净机器和性能仍另设验收，详见剩余清单。
+已验完整离线入口为 **`migration_install_v2 plan/install/resume`**，从固定缓存构建CPU base、switch overlay、图形和v6 App。公开 `99a271d` 已完成[同机独立目录整链构建与新产品运行](docs/PUBLIC_REPRODUCTION_V1.md)；较早图形受控中断、重验复用与新attempt恢复见 [安装入口](migration_install_v2/README.md)及[恢复验收](docs/MIGRATION_INSTALL_V2.md)。新增 [doctor](migration_doctor_v1/README.md)只用于分项前置诊断。
+
+旧版已有provider构建入口为 **`migration_v6`**，使用 `examples/window-switch` 的新profile。普通CPU provider先生成switch driver overlay，再与既有图形provider生成App。overlay保留对原CPU provider绝对路径的依赖，不能单独搬移，也不是完整provider；生成后的App已另验搬移运行。旧install-v1仍只构建原profile。下一项固定CPU/ABI热点工作负载，测量实际命中与成本，再在差分门禁下优化；干净机器和性能仍另设验收，详见剩余清单。
 
 - [正式窗口 switch 开发与复现](window_switch_v1/README.md)及[实际验收](docs/WINDOW_SWITCH_V1.md)。
 - [真实运行监督与独立复核](migration_run_v3/README.md)：单进程、OS事件与同档恢复分别记录。
@@ -71,7 +74,7 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 先分析本轮窗口switch样例；完整构建参数见上述正式开发入口：
 
 ```sh
-python3.13 -B -m migration_v6 analyze examples/window-switch/switch_tile.exe \
+python3.13 -B -m migration_v7 analyze examples/window-switch/switch_tile.exe \
   --profile examples/window-switch/profile.json
 ```
 
