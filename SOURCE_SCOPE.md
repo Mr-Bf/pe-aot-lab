@@ -2,7 +2,7 @@
 
 当前完整安装入口为 `migration_install_v2`，窗口switch低层入口为 `migration_v6`、`window_switch_v1` 与 `migration_run_v3`；基础及旧profile入口为 `migration_cache_v2`、`portable_graphics_v2`、`portable_lifter_v1`、`migration_v5`、`migration_install_v1`。保留被这些模块复用的旧源码目录、所有实际补丁、锁、C/C++ runtime 和 shader header。
 
-当前源码发行515文件：公开 `99a271d` 的499文件，后续doctor的7文件增量，以及本轮8个 `window_callback_bench_v1` 文件和1份报告。完整native构建与新App运行绑定499文件的原提交；doctor和CPU基准各自单独验收，不推断515文件已经重新完成整链构建。见 [公开源码复现](docs/PUBLIC_REPRODUCTION_V1.md)、[doctor验收](docs/MIGRATION_DOCTOR_V1.md)及[CPU采样](docs/WINDOW_CALLBACK_BENCH_V1.md)。
+当前源码发行527文件：公开 `99a271d` 的499文件，后续doctor的7文件增量、CPU基线的9文件增量，以及本轮11个 `window_callback_pair_v1` 文件与1份报告。完整native构建与新App运行绑定499文件的原提交；doctor、CPU基线及成对实验各自单独验收，不推断527文件已经重新完成整链构建。见 [公开源码复现](docs/PUBLIC_REPRODUCTION_V1.md)、[CPU基线](docs/WINDOW_CALLBACK_BENCH_V1.md)及[成对实验](docs/WINDOW_CALLBACK_PAIR_V1.md)。
 
 此源码导出不携带原私有仓库Git历史、`build/`、`work/`、运行日志或已安装provider。四个第一方PE例外为 `examples/integer-tile/integer_tile.exe`、`examples/switch/switch8.exe`、`examples/switch/switch8_variant.exe`、`examples/window-switch/switch_tile.exe`，各自来源和SHA在样例目录登记；不包含第三方游戏二进制。README与剩余工作清单单独维护，历史实验源码按发行范围保留。
 
@@ -49,3 +49,8 @@
 ## 回调 CPU 测量追加
 
 新增独立基准 harness、prepare/measure 协调器、只读 reader 与两套纯Python测试。产品事务引擎、真实提升对象与原 probe 保持既有身份；本轮不发布 provider、App、基准二进制或完整私有原始证据。工具/完整状态/采样复核通过不等于时钟稳定性、完整ABI或游戏性能通过，详见本轮报告。公开副本只运行相同36项Python测试，不冒称重新执行了完整native基准。
+
+
+## lookup成对实验追加
+
+追加11个 `window_callback_pair_v1` 文件和1份报告。新模块复用v1来源校验与既有产品对象，生成六文件运行时副本，仅唯一instruction函数替换可变化；旧源码和产品不改写。共享策略选择器仅用于受控比较，不能当作正式runtime已优化。公开不包含原始预算快照（C中直接比较）、本机测量二进制或provider。公开32项Python检查与私有本机native/RAW采样分别列证据。

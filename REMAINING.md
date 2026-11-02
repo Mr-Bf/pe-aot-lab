@@ -26,7 +26,8 @@
 | 已通过子项 | 公开源码同机独立目录整链native复现 | 构建/正确性/整链通过，性能未验 | 公开99a271d的499文件从本地archive导出；既有固定缓存→全部新provider/App，144命令、5459正式reader/1700额外审查、新callback32及新App两轮Cocoa/790运行复核；首次超时和额外实例单列。不是网络clone/冷获取或bit-repro证明 |
 | 已通过子项 | v6安装前分项诊断 | 实现/边界/本机正负诊断通过，无native构建 | 11组PASS/FAIL/SKIPPED；实现14项、独立14项普通/-O；实际11PASS退出0，负例7PASS/3FAIL/1SKIPPED退出2；源快照/完整性边界明确 |
 | 已通过子项 | 正式switch回调CPU测量工具/原始采样 | 构建/32例完整状态/独立读验通过；稳定性能未验 | 两基址约79万次回调、384原始批次、16计时末态，4047文件普通/-O独立复核一致；7条时钟逆差及调度扰动原样保留，未执行完整ABI/App/GPU或启用旧快路径 |
-| P0 | 校准时间源/成对测量，验证指令查找优化 | 中 | 先解决严格双时钟与稳定性验收，再保持完整State/内存/故障语义做基线配对；不删除慢样本、不扣reset、不从该组件推断App提速；随后扩完整ABI及消息负载成本 |
+| 已通过子项 | RAW时间源观察与lookup成对优化实验 | 组件正确性/原始采样/独立复核通过；非部署收益 | 64正常fullresponses、1456预算对、约315万次测量阶段回调、960样本；16场景配对中位比0.9191–0.9289，191/192更快；新RAW零逆差但调度慢例保留，旧异常不改写 |
+| P0 | 去掉实验选择器，验证单策略产物 | 中 | 分别生成reference/candidate，检查实际代码；保持完整状态/预算/故障门禁，交替进程测量收益是否保留。通过后才版本化接入正式runtime，再补完整ABI、实际消息和App回归；不把组件比值当FPS |
 | P0 | 独立干净环境复现与运行 | 中 | 本机v2完整构建/两轮App已过；另一独立环境需要单独取得缓存/SDK/构建/交互/搬移证据，不能从本机结果推断 |
 | P1 | 更多 PE／编译器形态与诊断 | 大 | 多个独立编译产物；未知指令/间接边精确拒绝；失败给出PC、API和原因；不以改简单样本绕过原失败 |
 | P1 | 普通函数指针／尾调用、复杂ABI和运行机制 | 大 | 明确有限目标或回退合同；线程/TLS/SEH/CRT按目标需求逐项验证；含重入、异常、内存故障反例 |
@@ -47,7 +48,7 @@
 
 ## 当前优先开发入口
 
-先读 [CPU实测报告](docs/WINDOW_CALLBACK_BENCH_V1.md)与[测量入口](window_callback_bench_v1/README.md)，按 prepare→measure→独立review推进。工具/正确性/原始采样已验，时钟逆差和调度扰动尚未关闭；下一批先校准时间源与配对协议，再以完整状态/故障语义验证专用指令查找候选，完整ABI另验。[公开源码复现](docs/PUBLIC_REPRODUCTION_V1.md)、[doctor](docs/MIGRATION_DOCTOR_V1.md)与[安装入口](migration_install_v2/README.md)保持基线。第二台干净机器、网络冷获取、长测、同场景性能与真实游戏仍另设验收。
+先读 [指令查找成对报告](docs/WINDOW_CALLBACK_PAIR_V1.md)与[新入口](window_callback_pair_v1/README.md)。已按预设规则Go下一单策略产物实验；新RAW样本未见逆差，调度扰动和旧异常保留，不把共同策略分支下的比值推成部署收益。[v1基线](docs/WINDOW_CALLBACK_BENCH_V1.md)、[公开源码复现](docs/PUBLIC_REPRODUCTION_V1.md)、[doctor](docs/MIGRATION_DOCTOR_V1.md)与[安装入口](migration_install_v2/README.md)保持原样。完整ABI、另一干净环境、网络冷获取、长测、同场景性能与真实游戏另验。
 
 ## 下一位开发者从哪里开始
 
