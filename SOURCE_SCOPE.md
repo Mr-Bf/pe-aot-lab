@@ -2,7 +2,7 @@
 
 当前完整安装入口为 `migration_install_v2`，窗口switch低层入口为 `migration_v6`、`window_switch_v1` 与 `migration_run_v3`；基础及旧profile入口为 `migration_cache_v2`、`portable_graphics_v2`、`portable_lifter_v1`、`migration_v5`、`migration_install_v1`。保留被这些模块复用的旧源码目录、所有实际补丁、锁、C/C++ runtime 和 shader header。
 
-当前源码发行506文件：公开 `99a271d` 的499文件加上5个 `migration_doctor_v1` 文件和2份验收报告。完整native构建与新App运行绑定499文件的原提交；新增doctor单独完成测试和实际预检，不能将其追加推断为506文件重新完整构建通过。见 [公开源码复现](docs/PUBLIC_REPRODUCTION_V1.md)及[doctor验收](docs/MIGRATION_DOCTOR_V1.md)。
+当前源码发行515文件：公开 `99a271d` 的499文件，后续doctor的7文件增量，以及本轮8个 `window_callback_bench_v1` 文件和1份报告。完整native构建与新App运行绑定499文件的原提交；doctor和CPU基准各自单独验收，不推断515文件已经重新完成整链构建。见 [公开源码复现](docs/PUBLIC_REPRODUCTION_V1.md)、[doctor验收](docs/MIGRATION_DOCTOR_V1.md)及[CPU采样](docs/WINDOW_CALLBACK_BENCH_V1.md)。
 
 此源码导出不携带原私有仓库Git历史、`build/`、`work/`、运行日志或已安装provider。四个第一方PE例外为 `examples/integer-tile/integer_tile.exe`、`examples/switch/switch8.exe`、`examples/switch/switch8_variant.exe`、`examples/window-switch/switch_tile.exe`，各自来源和SHA在样例目录登记；不包含第三方游戏二进制。README与剩余工作清单单独维护，历史实验源码按发行范围保留。
 
@@ -45,3 +45,7 @@
 追加 `migration_doctor_v1` 的三个生产Python文件、README及独立测试文件，以及两份验收报告。诊断器调用现有v2只读验证入口，分别报告11组PASS/FAIL/SKIPPED，stdout JSON，不创建安装work-root/out，不自动启动builder或App。
 
 项目文件只读承诺按文档的 `-B` 或 `PYTHONDONTWRITEBYTECODE=1` 调用解释；普通无-B运行可生成pycache，Apple发现可能维护系统缓存。implementation清单是扫描所得，不是必需资源完整性证明；doctor自身摘要是报告时的文件快照，不是加载代码身份或全过程稳定性证明。预检完成不能绕过安装准入，也不新增ISA/ABI/图形兼容范围。
+
+## 回调 CPU 测量追加
+
+新增独立基准 harness、prepare/measure 协调器、只读 reader 与两套纯Python测试。产品事务引擎、真实提升对象与原 probe 保持既有身份；本轮不发布 provider、App、基准二进制或完整私有原始证据。工具/完整状态/采样复核通过不等于时钟稳定性、完整ABI或游戏性能通过，详见本轮报告。公开副本只运行相同36项Python测试，不冒称重新执行了完整native基准。
