@@ -4,9 +4,11 @@
 
 这是一个以正确性与性能为目标的工程研究原型。当前已跑通自制窗口程序的原生 App 闭环；还不能转换一般 Windows／Steam 单机游戏。公开仓库包含源码、固定依赖配置、补丁和小型自产样例，完整本机实验日志与工具链缓存不在仓库中。
 
-**2026-11-02：v7 完整离线安装、受控恢复及新版诊断通过。** `migration_install_v3` 从固定缓存新建三个 provider，App 编译受控中断后在新 attempt 恢复；144 条被接受构建命令、5514 文件独立复核及新 App 原路径／搬移两轮正常存取通过，运行另核对805文件。`migration_doctor_v2` 提供12组前置检查，新增80项测试在普通／`-O`模式通过。首次桌面绑定延迟导致的超时及额外实例清理单独保留。见 [本轮报告](docs/MIGRATION_INSTALL_V3.md)。
+**2026-11-02：完整外层 ABI 单次观察验证通过。** 新 `window_outer_abi_v1` 在两种查找实现 × guest O0／O3 共四个原生诊断程序中，从真实 PE main 完成 RIGHT／KEYUP，后者实际调用 DefWindowProcA。64条事件、32份完整快照、8条选定调用链和3980文件独立复核通过；33项单测、128项轨迹内存篡改反例各模式通过。首次两次调用点选择错误及拒绝记录保留，详见[本轮报告](docs/WINDOW_OUTER_ABI_V1.md)。这是 TEST_QUEUE 驱动、复用已验提升对象／后端的无计时诊断；未完成确定性重放、完整预算／终止矩阵或性能测量。
 
-本轮构建来源为本地公开基线 `ede6d8d` 加14个新模块文件，共578个冻结文件；随后更新的报告及主页不在该构建快照中。这是同机、已有固定缓存的独立目录重建，不等于网络clone、冷获取、另一台机器或二进制逐字节可重复构建。仍无App/FPS或真实游戏性能结论。
+**前批：v7 完整离线安装、受控恢复及新版诊断通过。** `migration_install_v3` 从固定缓存新建三个 provider，App 编译受控中断后在新 attempt 恢复；144 条被接受构建命令、5514 文件独立复核及新 App 原路径／搬移两轮正常存取通过，运行另核对805文件。`migration_doctor_v2` 提供12组前置检查，新增80项测试在普通／`-O`模式通过。首次桌面绑定延迟导致的超时及额外实例清理单独保留。见 [本轮报告](docs/MIGRATION_INSTALL_V3.md)。
+
+前批v7安装构建来源为本地公开基线 `ede6d8d` 加14个新模块文件，共578个冻结文件；随后更新的报告及主页不在该构建快照中。这是同机、已有固定缓存的独立目录重建，不等于网络clone、冷获取、另一台机器或二进制逐字节可重复构建。仍无App/FPS或真实游戏性能结论。
 
 **前批：查找优化已接入正式运行时，新App回归通过。** `migration_v7`完成69条构建命令；新对象1488次回调内核执行（32正常＋1456完整预算）及原路径/搬移两轮Cocoa存取正常退出。三层独立普通/-O复核分别读取3806、5148、805个文件身份，86项测试通过。见 [前批报告](docs/WINDOW_LOOKUP_V1.md)。该1488次矩阵没有在本轮重新执行。
 
@@ -46,6 +48,7 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 | 早期 switch 原 x86 对照 | 独立 scalar 切片的288次正常ARM与144次原PE字节对照保留；本轮窗口callback不是新的原x86差分。 |
 | 标量／内存／ABI | 多项组件差分和拒绝测试已通过；它们各自的支持范围不同，不等于通用 Windows 运行时。 |
 | 前批v7生产lookup与新App | 仅替换instruction查找，状态快照/权限/回滚保留；650产品文件、新callback完整预算、两轮真实Cocoa及同档恢复通过。该批复用已有provider，未重建工具链或测App性能。 |
+| 完整外层ABI观察 | 单次真实 DispatchMessage／callback／DefWindowProc／RET，完整State／Context恢复（两个计数槽另验）、映像oracle及40B marker／shadow通过；其余RSP以下栈仍缺全部字节独立oracle。不是新增API兼容或性能验收。 |
 | 性能 | 已有局部微基准和资源记录；尚无代表性游戏性能、Wine＋Rosetta 同场景对比或整体提速结论。 |
 
 当前窗口样例限制包括单 guest worker、显式回调入口、固定的 Win32／COM／D3D11 契约、640×360 画面及限定 shader／资源参数。未知指令、未证明的跳转、导入或运行机制会明确拒绝。
@@ -54,7 +57,7 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 
 ## 开发入口
 
-当前完整离线入口是 **`migration_install_v3 plan/install/resume`**，安装前诊断为 **`migration_doctor_v2`**；已有provider可用 **`migration_v7 analyze/build/verify`**。产物为 `window-lookup-v7`，安装由 `migration_install_v3.review` 独立复核，实际App使用 `migration_run_v4`。新计划schema3／session schema2绑定版本与固定lookup身份，拒绝在旧v2安装目录直接恢复；升级须使用新目录。见 [安装入口](migration_install_v3/README.md)、[诊断入口](migration_doctor_v2/README.md)及[剩余工作](REMAINING.md)。下一项是[完整外层ABI实验](docs/WINDOW_OUTER_ABI_NEXT_V1.md)，目前仅完成方案复审。
+当前完整离线入口是 **`migration_install_v3 plan/install/resume`**，安装前诊断为 **`migration_doctor_v2`**；已有provider可用 **`migration_v7 analyze/build/verify`**。产物为 `window-lookup-v7`，安装由 `migration_install_v3.review` 独立复核，实际App使用 `migration_run_v4`。新计划schema3／session schema2绑定版本与固定lookup身份，拒绝在旧v2安装目录直接恢复；升级须使用新目录。见 [安装入口](migration_install_v3/README.md)、[诊断入口](migration_doctor_v2/README.md)及[剩余工作](REMAINING.md)。[完整外层ABI诊断](window_outer_abi_v1/README.md)现已完成 A1／A2 单次观察切片；下一项是确定性重放、预算与终止矩阵，随后才计时。
 
 历史完整离线入口 **`migration_install_v2 plan/install/resume`** 构建v6 App，配套doctor v1。公开 `99a271d` 的[同机独立目录复现](docs/PUBLIC_REPRODUCTION_V1.md)和较早[恢复验收](docs/MIGRATION_INSTALL_V2.md)分别保留，不代替本轮证据。
 

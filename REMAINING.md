@@ -30,7 +30,8 @@
 | 已通过子项 | 无选择器独立产物 | 组件构建/完整状态/实测/独立复核通过 | 64normal、2912完整budget、96process/1536样本，16场景配对中位比约0.9141–0.9411，189/192更快；无App性能结论 |
 | 已通过子项 | v7正式lookup及新App回归 | 代码/构建/正确性/受限集成已验，App性能未验 | 69构建命令、86测试、1488内核执行含1456完整预算；两轮Cocoa原路径/搬移存取正常退出；产品3806/回调5148/运行805文件身份独立复核（产品内650文件） |
 | 已通过子项 | v7的install/resume/doctor接线 | 实现／版本边界／本机整链通过，性能未验 | schema3计划／session2、固定lookup身份；旧v2拒绝；App真实SIGTERM后前三provider重验复用，新attempt生成App；80项普通／-O、12组doctor正负例、144条接受命令、5514／805文件独立复核。首次桌面绑定超时及额外实例清理保留，见[本轮报告](docs/MIGRATION_INSTALL_V3.md) |
-| P0 | 完整外层ABI与代表性持续负载 | 中；方案已复审，尚未实现 | [设计](docs/WINDOW_OUTER_ABI_NEXT_V1.md)的A0字段清单／固定输入仍待验证，A1–A6未实现；先完整状态差分，再采集成对计时，分离CPU/GPU，保留慢例，不以组件比值代替FPS |
+| 已通过子项 | 完整外层ABI单次观察 | A1／A2观察切片已构建、执行和独立复核 | 四配置、64事件／32快照／8选定调用链；State／Context恢复、映像oracle和40B marker已验，3980文件两模式复核；33单测与128轨迹变异拒绝／每模式。保留两次selector错误；非系统键盘、重放或性能 |
+| P0 | 完整外层ABI重放、矩阵与持续负载 | 中；单次观察已验，重放与计时未完成 | 同地址重置、固定输入、Context增量与TLS累计双账；补其他栈oracle、基址／正常场景、逐预算／ABI破坏／默认API／ExitProcess负例。全部门禁通过后冻结计时，不能用guest steps推断时间 |
 | P0 | 独立干净环境复现与运行 | 中 | 本机v3完整构建／恢复／两轮App已过；另一独立环境需要单独取得缓存/SDK/构建/交互/搬移证据，不能从本机结果推断 |
 | P1 | 更多 PE／编译器形态与诊断 | 大 | 多个独立编译产物；未知指令/间接边精确拒绝；失败给出PC、API和原因；不以改简单样本绕过原失败 |
 | P1 | 普通函数指针／尾调用、复杂ABI和运行机制 | 大 | 明确有限目标或回退合同；线程/TLS/SEH/CRT按目标需求逐项验证；含重入、异常、内存故障反例 |
@@ -51,7 +52,7 @@
 
 ## 当前优先开发入口
 
-先读 [v7安装与恢复报告](docs/MIGRATION_INSTALL_V3.md)、[安装入口](migration_install_v3/README.md)、[前置诊断](migration_doctor_v2/README.md)及[运行入口](migration_run_v4/README.md)。本轮工具接线与新App功能已验，前批完整预算矩阵单独保留。下一项按[外层ABI方案](docs/WINDOW_OUTER_ABI_NEXT_V1.md)完成A0字段／确定性输入定义、A1生成器，再做A2真实RIGHT／KEYUP无计时纵切；这些阶段尚未实现。前批组件耗时下降5.9%–8.6%不能推断App已提速。完整ABI性能、干净环境、网络冷获取、长测、同场景性能与真实游戏仍另验。目前不需要Steam账号，进入固定合法游戏输入盘点时再通知用户。
+先读[外层ABI观察报告](docs/WINDOW_OUTER_ABI_V1.md)、[模块入口](window_outer_abi_v1/README.md)及[当前边界合同](docs/WINDOW_OUTER_ABI_CONTRACT_V1.md)。单次观察A1／A2切片已验；下一步固定诊断输入／同地址恢复／双账本，再补完整预算和终止路径，尚不允许计时或缩减State保护。生产工具仍为[install v3](migration_install_v3/README.md)／[doctor v2](migration_doctor_v2/README.md)，实际App使用[run v4](migration_run_v4/README.md)。前批组件收益不能外推App性能；干净环境、网络冷获取、长测、同场景性能与真实游戏另验。目前不需要Steam账号。
 
 ## 下一位开发者从哪里开始
 
