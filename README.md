@@ -4,7 +4,11 @@
 
 这是一个以正确性与性能为目标的工程研究原型。当前已跑通自制窗口程序的原生 App 闭环；还不能转换一般 Windows／Steam 单机游戏。公开仓库包含源码、固定依赖配置、补丁和小型自产样例，完整本机实验日志与工具链缓存不在仓库中。
 
-**2026-11-02：完整外层 ABI 单次观察验证通过。** 新 `window_outer_abi_v1` 在两种查找实现 × guest O0／O3 共四个原生诊断程序中，从真实 PE main 完成 RIGHT／KEYUP，后者实际调用 DefWindowProcA。64条事件、32份完整快照、8条选定调用链和3980文件独立复核通过；33项单测、128项轨迹内存篡改反例各模式通过。首次两次调用点选择错误及拒绝记录保留，详见[本轮报告](docs/WINDOW_OUTER_ABI_V1.md)。这是 TEST_QUEUE 驱动、复用已验提升对象／后端的无计时诊断；未完成确定性重放、完整预算／终止矩阵或性能测量。
+**2026-11-02：同进程正常 ABI 重放验证通过。** 新 `window_outer_replay_v1` 在两查找策略 × guest O0／O3 四配置中，对 RIGHT／KEYUP 各执行两次固定输入诊断和一次原输入 continuation。200事件、104完整快照、24条选定调用链通过；同地址完整 guest 恢复、两诊断轮逐字节一致及宿主累计计数经4060文件独立普通／`-O`读验。51项模块测试与396项轨迹内存变异拒绝在两模式通过。独立复审发现的12项关联校验反例已修复并验证拒绝，旧reader结果保留为已知缺口历史，见[本轮报告](docs/WINDOW_OUTER_REPLAY_V1.md)。
+
+仍只覆盖固定自制样例和首选基址的两个正常场景，没有跨进程全字节等价、完整预算／故障矩阵或性能结论。**真实第三方应用／游戏完成迁移数仍为0。** 下一批补完整边界矩阵，并开始固定真实目标的PE／依赖盘点；不以测试数量换算整体完成百分比。
+
+**前批：完整外层 ABI 单次观察验证通过。** 新 `window_outer_abi_v1` 在两种查找实现 × guest O0／O3 共四个原生诊断程序中，从真实 PE main 完成 RIGHT／KEYUP，后者实际调用 DefWindowProcA。64条事件、32份完整快照、8条选定调用链和3980文件独立复核通过；33项单测、128项轨迹内存篡改反例各模式通过。首次两次调用点选择错误及拒绝记录保留，详见[本轮报告](docs/WINDOW_OUTER_ABI_V1.md)。这是 TEST_QUEUE 驱动、复用已验提升对象／后端的无计时诊断；未完成确定性重放、完整预算／终止矩阵或性能测量。
 
 **前批：v7 完整离线安装、受控恢复及新版诊断通过。** `migration_install_v3` 从固定缓存新建三个 provider，App 编译受控中断后在新 attempt 恢复；144 条被接受构建命令、5514 文件独立复核及新 App 原路径／搬移两轮正常存取通过，运行另核对805文件。`migration_doctor_v2` 提供12组前置检查，新增80项测试在普通／`-O`模式通过。首次桌面绑定延迟导致的超时及额外实例清理单独保留。见 [本轮报告](docs/MIGRATION_INSTALL_V3.md)。
 
@@ -49,6 +53,7 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 | 标量／内存／ABI | 多项组件差分和拒绝测试已通过；它们各自的支持范围不同，不等于通用 Windows 运行时。 |
 | 前批v7生产lookup与新App | 仅替换instruction查找，状态快照/权限/回滚保留；650产品文件、新callback完整预算、两轮真实Cocoa及同档恢复通过。该批复用已有provider，未重建工具链或测App性能。 |
 | 完整外层ABI观察 | 单次真实 DispatchMessage／callback／DefWindowProc／RET，完整State／Context恢复（两个计数槽另验）、映像oracle及40B marker／shadow通过；其余RSP以下栈仍缺全部字节独立oracle。不是新增API兼容或性能验收。 |
+| 同进程ABI重放 | 每消息两次诊断＋一次原输入continuation，guest原址恢复、逐字节重放一致、每阶段State／Context转换及三宿主会话结构已验。其余栈独立语义oracle及完整FileTLS独立导出仍有缺口。 |
 | 性能 | 已有局部微基准和资源记录；尚无代表性游戏性能、Wine＋Rosetta 同场景对比或整体提速结论。 |
 
 当前窗口样例限制包括单 guest worker、显式回调入口、固定的 Win32／COM／D3D11 契约、640×360 画面及限定 shader／资源参数。未知指令、未证明的跳转、导入或运行机制会明确拒绝。
@@ -57,7 +62,7 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 
 ## 开发入口
 
-当前完整离线入口是 **`migration_install_v3 plan/install/resume`**，安装前诊断为 **`migration_doctor_v2`**；已有provider可用 **`migration_v7 analyze/build/verify`**。产物为 `window-lookup-v7`，安装由 `migration_install_v3.review` 独立复核，实际App使用 `migration_run_v4`。新计划schema3／session schema2绑定版本与固定lookup身份，拒绝在旧v2安装目录直接恢复；升级须使用新目录。见 [安装入口](migration_install_v3/README.md)、[诊断入口](migration_doctor_v2/README.md)及[剩余工作](REMAINING.md)。[完整外层ABI诊断](window_outer_abi_v1/README.md)现已完成 A1／A2 单次观察切片；下一项是确定性重放、预算与终止矩阵，随后才计时。
+当前完整离线入口是 **`migration_install_v3 plan/install/resume`**，安装前诊断为 **`migration_doctor_v2`**；已有provider可用 **`migration_v7 analyze/build/verify`**。产物为 `window-lookup-v7`，安装由 `migration_install_v3.review` 独立复核，实际App使用 `migration_run_v4`。新计划schema3／session schema2绑定版本与固定lookup身份，拒绝在旧v2安装目录直接恢复；升级须使用新目录。见 [安装入口](migration_install_v3/README.md)、[诊断入口](migration_doctor_v2/README.md)及[剩余工作](REMAINING.md)。当前实验入口为[同地址ABI重放](window_outer_replay_v1/README.md)：正常同进程重放已验；下一项是完整预算／终止矩阵和真实目标PE盘点，跨进程输入对齐与计时另验。
 
 历史完整离线入口 **`migration_install_v2 plan/install/resume`** 构建v6 App，配套doctor v1。公开 `99a271d` 的[同机独立目录复现](docs/PUBLIC_REPRODUCTION_V1.md)和较早[恢复验收](docs/MIGRATION_INSTALL_V2.md)分别保留，不代替本轮证据。
 
