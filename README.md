@@ -4,7 +4,11 @@
 
 这是一个以正确性与性能为目标的工程研究原型。当前已跑通自制窗口程序的原生 App 闭环；还不能转换一般 Windows／Steam 单机游戏。公开仓库包含源码、固定依赖配置、补丁和小型自产样例，完整本机实验日志与工具链缓存不在仓库中。
 
-**2026-11-02：同进程正常 ABI 重放验证通过。** 新 `window_outer_replay_v1` 在两查找策略 × guest O0／O3 四配置中，对 RIGHT／KEYUP 各执行两次固定输入诊断和一次原输入 continuation。200事件、104完整快照、24条选定调用链通过；同地址完整 guest 恢复、两诊断轮逐字节一致及宿主累计计数经4060文件独立普通／`-O`读验。51项模块测试与396项轨迹内存变异拒绝在两模式通过。独立复审发现的12项关联校验反例已修复并验证拒绝，旧reader结果保留为已知缺口历史，见[本轮报告](docs/WINDOW_OUTER_REPLAY_V1.md)。
+**2026-11-03：首个真实目标已固定并完成静态盘点。** Chocolate Doom 3.1.1 官方 Win64 包通过官方 SHA 校验，2 个 EXE、32 个 DLL完成库存和当前v7的数据loader试读。主程序318个导入只有3个名称命中且参数未验；34PE均在当前门禁拒绝。新增[库存器](real_pe_inventory_v1/README.md)与[缺口报告工具](real_target_gap_v1/README.md)，实际事实及复审见[本轮报告](docs/REAL_TARGET_INVENTORY_V1.md)。下一主线是原PE的CFG/指令需求、CRT/TLS/异常及SDL/API分界；不把静态解析或导入同名计为支持率。**第三方成功迁移仍为0，本批未执行游戏、构建新App或测性能。** 当前不需要Steam登录。
+
+以下保留历史批次证据；旧段落的“下一批”按当时版本解释。
+
+**前批 2026-11-02：同进程正常 ABI 重放验证通过。** 新 `window_outer_replay_v1` 在两查找策略 × guest O0／O3 四配置中，对 RIGHT／KEYUP 各执行两次固定输入诊断和一次原输入 continuation。200事件、104完整快照、24条选定调用链通过；同地址完整 guest 恢复、两诊断轮逐字节一致及宿主累计计数经4060文件独立普通／`-O`读验。51项模块测试与396项轨迹内存变异拒绝在两模式通过。独立复审发现的12项关联校验反例已修复并验证拒绝，旧reader结果保留为已知缺口历史，见[本轮报告](docs/WINDOW_OUTER_REPLAY_V1.md)。
 
 仍只覆盖固定自制样例和首选基址的两个正常场景，没有跨进程全字节等价、完整预算／故障矩阵或性能结论。**真实第三方应用／游戏完成迁移数仍为0。** 下一批补完整边界矩阵，并开始固定真实目标的PE／依赖盘点；不以测试数量换算整体完成百分比。
 
@@ -62,7 +66,7 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 
 ## 开发入口
 
-当前完整离线入口是 **`migration_install_v3 plan/install/resume`**，安装前诊断为 **`migration_doctor_v2`**；已有provider可用 **`migration_v7 analyze/build/verify`**。产物为 `window-lookup-v7`，安装由 `migration_install_v3.review` 独立复核，实际App使用 `migration_run_v4`。新计划schema3／session schema2绑定版本与固定lookup身份，拒绝在旧v2安装目录直接恢复；升级须使用新目录。见 [安装入口](migration_install_v3/README.md)、[诊断入口](migration_doctor_v2/README.md)及[剩余工作](REMAINING.md)。当前实验入口为[同地址ABI重放](window_outer_replay_v1/README.md)：正常同进程重放已验；下一项是完整预算／终止矩阵和真实目标PE盘点，跨进程输入对齐与计时另验。
+当前完整离线入口是 **`migration_install_v3 plan/install/resume`**，安装前诊断为 **`migration_doctor_v2`**；已有provider可用 **`migration_v7 analyze/build/verify`**。产物为 `window-lookup-v7`，安装由 `migration_install_v3.review` 独立复核，实际App使用 `migration_run_v4`。新计划schema3／session schema2绑定版本与固定lookup身份，拒绝在旧v2安装目录直接恢复；升级须使用新目录。见 [安装入口](migration_install_v3/README.md)、[诊断入口](migration_doctor_v2/README.md)及[剩余工作](REMAINING.md)。当前主线入口为[真实目标缺口盘点](real_target_gap_v1/README.md)，固定Chocolate Doom原PE已完成静态基线；下一项是CFG/指令需求与ABI分界。[同地址ABI重放](window_outer_replay_v1/README.md)已验，A3预算/终止只有设计，跨进程输入对齐与计时另验。
 
 历史完整离线入口 **`migration_install_v2 plan/install/resume`** 构建v6 App，配套doctor v1。公开 `99a271d` 的[同机独立目录复现](docs/PUBLIC_REPRODUCTION_V1.md)和较早[恢复验收](docs/MIGRATION_INSTALL_V2.md)分别保留，不代替本轮证据。
 

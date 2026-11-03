@@ -4,6 +4,8 @@
 
 以下状态按代码、构建、正确性、整链集成、性能分别判断。局部通过不能自动关闭整个阶段；没有可靠依据给出总体完成百分比。工作量中的“小／中／大”仅表示相对工程复杂度，不是时间承诺。
 
+2026-11-03已关闭“未固定真实输入”的缺口：Chocolate Doom 3.1.1官方Win64 ZIP及34个PE完成身份、静态库存、当前v7实际拒绝和独立复审。主程序318个导入仅3个名称命中且参数未验；真实AOT/运行仍为0。详见[目标报告](docs/REAL_TARGET_INVENTORY_V1.md)。
+
 ## 能力进度
 
 | 阶段 | 当前可证明的能力 | 尚缺的验收 |
@@ -33,7 +35,8 @@
 | 已通过子项 | 完整外层ABI单次观察 | A1／A2观察切片已构建、执行和独立复核 | 四配置、64事件／32快照／8选定调用链；State／Context恢复、映像oracle和40B marker已验，3980文件两模式复核；33单测与128轨迹变异拒绝／每模式。保留两次selector错误；非系统键盘、重放或性能 |
 | 已通过子项 | 同地址正常ABI重放 | 四配置执行与独立复核通过；性能未验 | 200事件／104快照／24选定调用；51单测、396轨迹变异拒绝／每模式，4060文件复核；12项共同篡改漏洞已复现并修复。原输入恢复、完整guest重放一致、每阶段转换及宿主累计账本已验，见[报告](docs/WINDOW_OUTER_REPLAY_V1.md) |
 | P0 | 完整外层ABI矩阵与持续负载 | 中；正常同进程重放已验，完整A0／A3和计时未完成 | 跨进程输入对齐、其他栈独立oracle、更多基址／正常场景、逐预算／ABI破坏／默认API／ExitProcess负例；通过后冻结计时，不能用guest steps推断时间 |
-| P0 | 首个真实目标PE盘点 | 未选定固定版本；第三方完成迁移数0 | 下一批确认代码／素材授权、固定原PE及资源身份，列出指令/控制流/DLL/API/CRT/TLS/异常/线程缺口，再确定适配范围；盘点不等于迁移通过 |
+| 已通过子项 | 首个真实目标PE/依赖库存 | 官方Win64固定身份、34PE库存及当前loader拒绝已验 | 仅静态事实，第三方转换0；素材未下载、DLL许可/源码闭包仍待审核 |
+| P0 主线 | 固定原PE的CFG/指令需求与ABI分界 | 大；main318符号、392224B代码区、TLS/异常/UCRT/SDL均有需求 | 带来源roots/基本块/未知间接边；逐PC诊断，决定native库桥接边界并验证目标真实启动路径，不靠放宽门禁计成功 |
 | P0 | 独立干净环境复现与运行 | 中 | 本机v3完整构建／恢复／两轮App已过；另一独立环境需要单独取得缓存/SDK/构建/交互/搬移证据，不能从本机结果推断 |
 | P1 | 更多 PE／编译器形态与诊断 | 大 | 多个独立编译产物；未知指令/间接边精确拒绝；失败给出PC、API和原因；不以改简单样本绕过原失败 |
 | P1 | 普通函数指针／尾调用、复杂ABI和运行机制 | 大 | 明确有限目标或回退合同；线程/TLS/SEH/CRT按目标需求逐项验证；含重入、异常、内存故障反例 |
@@ -54,7 +57,7 @@
 
 ## 当前优先开发入口
 
-先读[同地址重放报告](docs/WINDOW_OUTER_REPLAY_V1.md)、[模块入口](window_outer_replay_v1/README.md)及[重放合同](docs/WINDOW_OUTER_REPLAY_CONTRACT_V1.md)。正常同进程重放已验，下一批补完整A3预算／故障／终止矩阵，并开展固定真实目标PE／依赖盘点；完整A0、其他栈独立oracle和性能仍有缺口，尚不缩减State保护。生产工具仍为[install v3](migration_install_v3/README.md)／[doctor v2](migration_doctor_v2/README.md)，实际App使用[run v4](migration_run_v4/README.md)。前批组件收益不能外推App性能；干净环境、网络冷获取、长测和同场景对比另验。目前不需要Steam账号，选择用户提供的Steam目标时再通知登录。
+先读[真实目标报告](docs/REAL_TARGET_INVENTORY_V1.md)、[选型依据](docs/REAL_TARGET_SELECTION_V1.md)与[新缺口工具](real_target_gap_v1/README.md)。当前主线是Chocolate Doom原PE的CFG/指令需求和ABI/依赖分界；SDL桥接仍是待审核候选。A3终止预算仅有[辅助设计](docs/WINDOW_OUTER_BOUNDARY_NEXT_V1.md)，不是已执行结果。生产安装仍为[install v3](migration_install_v3/README.md)／[doctor v2](migration_doctor_v2/README.md)，实际App用[run v4](migration_run_v4/README.md)。真实游戏、干净环境和性能对比均待验；当前不需Steam账号。
 
 
 ## 下一位开发者从哪里开始
