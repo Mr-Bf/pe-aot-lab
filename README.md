@@ -4,7 +4,9 @@
 
 这是一个以正确性与性能为目标的工程研究原型。当前已跑通自制窗口程序的原生 App 闭环；还不能转换一般 Windows／Steam 单机游戏。公开仓库包含源码、固定依赖配置、补丁和小型自产样例，完整本机实验日志与工具链缓存不在仓库中。
 
-**2026-11-03：首个真实目标已固定并完成静态盘点。** Chocolate Doom 3.1.1 官方 Win64 包通过官方 SHA 校验，2 个 EXE、32 个 DLL完成库存和当前v7的数据loader试读。主程序318个导入只有3个名称命中且参数未验；34PE均在当前门禁拒绝。新增[库存器](real_pe_inventory_v1/README.md)与[缺口报告工具](real_target_gap_v1/README.md)，实际事实及复审见[本轮报告](docs/REAL_TARGET_INVENTORY_V1.md)。下一主线是原PE的CFG/指令需求、CRT/TLS/异常及SDL/API分界；不把静态解析或导入同名计为支持率。**第三方成功迁移仍为0，本批未执行游戏、构建新App或测性能。** 当前不需要Steam登录。
+**2026-11-03：固定原PE的CFG／指令需求图已验证。** 新[real_pe_cfg_v1](real_pe_cfg_v1/README.md)从Chocolate Doom入口和两个TLS回调递归发现45,456指令、11,286块和53,288边；478项间接／特殊控制前沿明确未闭合。全部节点与独立LLVM原字节/边界相符，47项测试普通／`-O`无skip通过，最终图逐字节相同。详见[报告](docs/REAL_PE_CFG_V1.md)。下一主线是原TLS启动路径的reason／状态／ABI合同和可验证小切片。**本批只运行静态解码工具，游戏AOT构建、guest执行和迁移成功均为0。** 不以图大小换算支持率。
+
+**前批 2026-11-03：首个真实目标已固定并完成静态盘点。** Chocolate Doom 3.1.1 官方 Win64 包通过官方 SHA 校验，2 个 EXE、32 个 DLL完成库存和当前v7的数据loader试读。主程序318个导入只有3个名称命中且参数未验；34PE均在当前门禁拒绝。新增[库存器](real_pe_inventory_v1/README.md)与[缺口报告工具](real_target_gap_v1/README.md)，实际事实及复审见[本轮报告](docs/REAL_TARGET_INVENTORY_V1.md)。下一主线是原PE的CFG/指令需求、CRT/TLS/异常及SDL/API分界；不把静态解析或导入同名计为支持率。**第三方成功迁移仍为0，本批未执行游戏、构建新App或测性能。** 当前不需要Steam登录。
 
 以下保留历史批次证据；旧段落的“下一批”按当时版本解释。
 
@@ -66,7 +68,7 @@ D3D11 子集 → DXMT／Metal → Cocoa macOS App
 
 ## 开发入口
 
-当前完整离线入口是 **`migration_install_v3 plan/install/resume`**，安装前诊断为 **`migration_doctor_v2`**；已有provider可用 **`migration_v7 analyze/build/verify`**。产物为 `window-lookup-v7`，安装由 `migration_install_v3.review` 独立复核，实际App使用 `migration_run_v4`。新计划schema3／session schema2绑定版本与固定lookup身份，拒绝在旧v2安装目录直接恢复；升级须使用新目录。见 [安装入口](migration_install_v3/README.md)、[诊断入口](migration_doctor_v2/README.md)及[剩余工作](REMAINING.md)。当前主线入口为[真实目标缺口盘点](real_target_gap_v1/README.md)，固定Chocolate Doom原PE已完成静态基线；下一项是CFG/指令需求与ABI分界。[同地址ABI重放](window_outer_replay_v1/README.md)已验，A3预算/终止只有设计，跨进程输入对齐与计时另验。
+当前完整离线入口是 **`migration_install_v3 plan/install/resume`**，安装前诊断为 **`migration_doctor_v2`**；已有provider可用 **`migration_v7 analyze/build/verify`**。产物为 `window-lookup-v7`，安装由 `migration_install_v3.review` 独立复核，实际App使用 `migration_run_v4`。新计划schema3／session schema2绑定版本与固定lookup身份，拒绝在旧v2安装目录直接恢复；升级须使用新目录。见 [安装入口](migration_install_v3/README.md)、[诊断入口](migration_doctor_v2/README.md)及[剩余工作](REMAINING.md)。当前主线入口为[原PE控制流需求图](real_pe_cfg_v1/README.md)，入口/TLS roots驱动的静态图与独立字节交叉已验；下一项是原TLS启动纵切的reason/状态/ABI合同。[元数据缺口盘点](real_target_gap_v1/README.md)保留基线。[同地址ABI重放](window_outer_replay_v1/README.md)已验，A3预算/终止只有设计，跨进程输入对齐与计时另验。
 
 历史完整离线入口 **`migration_install_v2 plan/install/resume`** 构建v6 App，配套doctor v1。公开 `99a271d` 的[同机独立目录复现](docs/PUBLIC_REPRODUCTION_V1.md)和较早[恢复验收](docs/MIGRATION_INSTALL_V2.md)分别保留，不代替本轮证据。
 

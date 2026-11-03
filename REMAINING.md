@@ -6,6 +6,8 @@
 
 2026-11-03已关闭“未固定真实输入”的缺口：Chocolate Doom 3.1.1官方Win64 ZIP及34个PE完成身份、静态库存、当前v7实际拒绝和独立复审。主程序318个导入仅3个名称命中且参数未验；真实AOT/运行仍为0。详见[目标报告](docs/REAL_TARGET_INVENTORY_V1.md)。
 
+本轮已新增[入口驱动CFG需求图](docs/REAL_PE_CFG_V1.md)：45,456节点/11,286块全部经独立原字节与LLVM边界交叉，47测试普通/-O无skip；478项前沿保留。解码辅助库原生运行，游戏AOT/执行仍未开始；下一主线先闭合原TLS启动的小范围语义与ABI。
+
 ## 能力进度
 
 | 阶段 | 当前可证明的能力 | 尚缺的验收 |
@@ -36,7 +38,8 @@
 | 已通过子项 | 同地址正常ABI重放 | 四配置执行与独立复核通过；性能未验 | 200事件／104快照／24选定调用；51单测、396轨迹变异拒绝／每模式，4060文件复核；12项共同篡改漏洞已复现并修复。原输入恢复、完整guest重放一致、每阶段转换及宿主累计账本已验，见[报告](docs/WINDOW_OUTER_REPLAY_V1.md) |
 | P0 | 完整外层ABI矩阵与持续负载 | 中；正常同进程重放已验，完整A0／A3和计时未完成 | 跨进程输入对齐、其他栈独立oracle、更多基址／正常场景、逐预算／ABI破坏／默认API／ExitProcess负例；通过后冻结计时，不能用guest steps推断时间 |
 | 已通过子项 | 首个真实目标PE/依赖库存 | 官方Win64固定身份、34PE库存及当前loader拒绝已验 | 仅静态事实，第三方转换0；素材未下载、DLL许可/源码闭包仍待审核 |
-| P0 主线 | 固定原PE的CFG/指令需求与ABI分界 | 大；main318符号、392224B代码区、TLS/异常/UCRT/SDL均有需求 | 带来源roots/基本块/未知间接边；逐PC诊断，决定native库桥接边界并验证目标真实启动路径，不靠放宽门禁计成功 |
+| 已通过子项 | 固定原PE的入口驱动CFG/指令需求 | 新XED适配器、47测试、45,456节点全量LLVM字节/边界交叉已验 | may-return/未知间接/异常/路径可行性未闭合，不是完整CFG或执行支持 |
+| P0 主线 | 原TLS启动纵切及ABI分界 | 大；原TLS根与helper 0x2010候选已定位，CRT/SDL仍有需求 | 明确reason/TEB/TLS/critical-section/FNINIT合同及独立oracle，只凭显式证明裁剪；随后做原PE小切片AOT |
 | P0 | 独立干净环境复现与运行 | 中 | 本机v3完整构建／恢复／两轮App已过；另一独立环境需要单独取得缓存/SDK/构建/交互/搬移证据，不能从本机结果推断 |
 | P1 | 更多 PE／编译器形态与诊断 | 大 | 多个独立编译产物；未知指令/间接边精确拒绝；失败给出PC、API和原因；不以改简单样本绕过原失败 |
 | P1 | 普通函数指针／尾调用、复杂ABI和运行机制 | 大 | 明确有限目标或回退合同；线程/TLS/SEH/CRT按目标需求逐项验证；含重入、异常、内存故障反例 |
@@ -57,7 +60,7 @@
 
 ## 当前优先开发入口
 
-先读[真实目标报告](docs/REAL_TARGET_INVENTORY_V1.md)、[选型依据](docs/REAL_TARGET_SELECTION_V1.md)与[新缺口工具](real_target_gap_v1/README.md)。当前主线是Chocolate Doom原PE的CFG/指令需求和ABI/依赖分界；SDL桥接仍是待审核候选。A3终止预算仅有[辅助设计](docs/WINDOW_OUTER_BOUNDARY_NEXT_V1.md)，不是已执行结果。生产安装仍为[install v3](migration_install_v3/README.md)／[doctor v2](migration_doctor_v2/README.md)，实际App用[run v4](migration_run_v4/README.md)。真实游戏、干净环境和性能对比均待验；当前不需Steam账号。
+先读[原PE控制流报告](docs/REAL_PE_CFG_V1.md)、[新开发入口](real_pe_cfg_v1/README.md)和[CFG合同](docs/REAL_PE_CFG_CONTRACT_V1.md)。当前主线是固定原TLS根到helper 0x2010的reason／状态／ABI合同，再做有独立语义对照的小切片AOT；不能仅扩大原32KiB门禁。ABI/依赖分界及SDL桥接仍待审查，A3仍为有界辅助设计。生产安装沿用install v3／doctor v2，实际App用run v4；真实游戏、干净环境和性能对比仍待验。当前无需Steam登录。
 
 
 ## 下一位开发者从哪里开始
