@@ -142,4 +142,8 @@ python3.13 -B -m migration_workflow_v1 verify build/workflow-conversion-01
 | `OUTPUT_EXISTS` | check／plan／build需要新工作区；已有产物用`verify`或`status`，未完成任务用`resume` |
 | 恢复时身份或进程状态无法验证 | 保留原工作区，根据诊断核对实际依赖与构建进程；不覆盖旧证据 |
 
-当前能力、验证记录与已知限制见[本批报告](../docs/MIGRATION_WORKFLOW_V1.md)。底层版本化CLI继续保留供开发和追溯使用；新用户从本入口开始，不需要逐个拼接这些命令。
+当前能力、验证记录与已知限制见[入口验收报告](../docs/MIGRATION_WORKFLOW_V1.md)及[离线整链与恢复报告](../docs/MIGRATION_WORKFLOW_OFFLINE_V1.md)。已有provider路径与offline路径均已对固定自产PE完成静态构建／恢复验收；offline还从公开提交的同机新源码目录实际重建了新provider和App。两种路线均不因此承诺未知PE兼容或裸机一键安装。
+
+若已有任务占锁，当前resume可能返回`BlockingIOError`／Errno35，code仍为通用`CHECK_FAILED`。先用status查看已记录阶段，保留当前构建进程；确认该次构建已经退出后再resume／verify，不重复build、不按超时推断所有子进程已消失。专门的BUSY错误码和更清楚的下一步提示仍是诊断改进项。
+
+底层版本化CLI继续保留供开发和追溯使用；新用户从本入口开始，不需要逐个拼接这些命令。

@@ -2,9 +2,11 @@
 
 将受限的Windows x86-64 PE在构建期翻译为Apple Silicon ARM64代码，打包为macOS App。项目以正确性与性能为目标；既有版本已经跑通自产窗口PE的原生App闭环，一般Windows／Steam游戏仍未支持。
 
-**开发入口统一为 [`migration_workflow_v1`](migration_workflow_v1/README.md)：一份配置完成init、check、build、resume和verify。** 本轮优先完成迁移脚本的使用、失败恢复和交付，再根据真实应用测试修补兼容性。TLS和真实游戏适配暂列后续队列。
+**开发入口统一为 [`migration_workflow_v1`](migration_workflow_v1/README.md)：一份配置完成init、check、build、resume和verify。** 固定已支持输入的迁移脚本MVP已完成同机静态交付闭环，覆盖既有provider与固定缓存offline两条路线、失败恢复和独立产物复核。工作流不自动启动App。
 
-已有provider路径的新App构建、verify、完成产物的resume重验复用、真实中断后的新attempt恢复，以及两份产品的独立读验均已通过。本地公开源码导出后，36项测试在普通／`-O`模式通过；尚未推送。offline前置检查／plan也已通过且未创建workspace，但新入口的完整离线构建／恢复和干净环境交付复现仍待验。所有新App均未启动，实际结果以[工作流报告](docs/MIGRATION_WORKFLOW_V1.md)为准。
+本轮从本地公开提交`7db91d2`的639文件完整导出到新源码目录，建立新CPU／switch／graphics provider；首次App阶段受控中断后，统一resume重验复用成功阶段并生成新App。整链经恢复完成，独立安装reader普通／`-O`报告逐字节相同；103个原失败文件保持不变。详见[离线整链与恢复报告](docs/MIGRATION_WORKFLOW_OFFLINE_V1.md)。本轮没有修改生产源码或新增App／guest／GPU执行，不是网络冷获取、第二台干净机器或性能验收；本地交付，不推送。
+
+下一主任务是固定Chocolate Doom原PE的startup／TLS reason、state与ABI切片。锁占用诊断、冷获取、第二机器和签名等交付余项继续保留，不再阻塞开始真实输入适配。未知PE不会自动生成profile，第三方迁移成功数仍为0。
 
 ## 从一份配置开始
 
@@ -43,8 +45,8 @@ python3.13 -B -m migration_workflow_v1 resume build/conversion-01
 
 ## 资料导航
 
-- [单配置工作流](migration_workflow_v1/README.md)与[本轮验收报告](docs/MIGRATION_WORKFLOW_V1.md)：新任务从这里开始。
-- [剩余工作](REMAINING.md)：继续新入口offline整链／恢复和交付复现，再进入真实应用测试。
+- [单配置工作流](migration_workflow_v1/README.md)：新任务从这里开始；[离线整链与恢复](docs/MIGRATION_WORKFLOW_OFFLINE_V1.md)记录本轮结果，[已有provider工作流](docs/MIGRATION_WORKFLOW_V1.md)保留上一批证据。
+- [剩余工作](REMAINING.md)：受限脚本MVP已闭合，下一主任务为真实原PE的startup／TLS边界切片；发行余项单列。
 - [能力与验收队列](REMAINING.md)：按可验证能力推进，不按周数或估算百分比汇报。
 - 历史构建／运行：[v7离线安装与恢复](docs/MIGRATION_INSTALL_V3.md)、[公开源码同机复现](docs/PUBLIC_REPRODUCTION_V1.md)、[真实运行监督](migration_run_v4/README.md)。各报告只证明其冻结版本。
 - 历史CPU／ABI研究：[正式lookup集成](docs/WINDOW_LOOKUP_V1.md)、[同地址ABI重放](docs/WINDOW_OUTER_REPLAY_V1.md)。局部性能不能外推为游戏收益。
